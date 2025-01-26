@@ -13,7 +13,7 @@ def main():
     st.set_page_config(page_title="Strava Dashboard", layout="wide")
 
     st.title("Strava Dashboard")
-    st.write("Visualize your activity data with insights and progressions.")
+    st.write("Running Data")
 
     # Refresh the access token
     try:

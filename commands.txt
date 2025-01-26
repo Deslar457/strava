@@ -1,3 +1,0 @@
-(base) C:\Users\pammie>cd C:\Users\pammie\Desktop\strava
-
-(base) C:\Users\pammie\Desktop\strava>streamlit run strava.py

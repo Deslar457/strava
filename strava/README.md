@@ -20,21 +20,21 @@ A Streamlit-based app to visualize and analyze Strava running data. Gain insight
    git clone https://github.com/Deslar457/strava.git
    cd strava
 
-## create virtual environment
+## Create virtual environment
 python -m venv venv
 source venv/bin/activate    # macOS/Linux
 venv\Scripts\activate       # Windows
 
-## install dependencies
+## Install dependencies
 pip install -r requirements.txt
 
-## add strava credentials 
+## Add strava credentials 
 client_id = "your_client_id"
 client_secret = "your_client_secret"
 refresh_token = "your_refresh_token"
 
 
-## run the app
+## Run the app
 streamlit run app.py
 
 ## File structure

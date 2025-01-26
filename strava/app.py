@@ -2,14 +2,18 @@ import streamlit as st
 from services.strava_api import refresh_access_token, fetch_activities
 from services.config import client_id, client_secret, refresh_token
 from utils.data_processing import process_activities
-from utils.visualisations import plot_monthly_distance, plot_weekly_distance
+from utils.visualisations import (
+    plot_monthly_distance,
+    plot_weekly_distance,
+    plot_progression,
+)
 import time
 
 def main():
     st.set_page_config(page_title="Strava Dashboard", layout="wide")
 
     st.title("Strava Dashboard")
-    st.write("Derricks Dashboard.")
+    st.write("Visualize your activity data with insights and progressions.")
 
     # Refresh the access token
     try:
@@ -28,13 +32,32 @@ def main():
             st.success("Activities fetched successfully!")
             df = process_activities(activities)
 
-            # Monthly Distance Bar Chart
-            st.header("Monthly Distance")
-            st.pyplot(plot_monthly_distance(df))
+            # Side-by-side Monthly and Weekly Distance
+            col1, col2 = st.columns(2)
 
-            # Weekly Distance Bar Chart
-            st.header("Weekly Distance")
-            st.pyplot(plot_weekly_distance(df))
+            with col1:
+                st.subheader("Monthly Distance")
+                st.pyplot(plot_monthly_distance(df))
+
+            with col2:
+                st.subheader("Weekly Distance")
+                st.pyplot(plot_weekly_distance(df))
+
+            # Distance Range Filter for Progression
+            st.sidebar.header("Progression Filter")
+            selected_distance = st.sidebar.selectbox(
+                "Select a Distance for Progression:",
+                [5, 6, 7, 10],
+                index=0
+            )
+
+            st.header(f"{selected_distance}K Progression")
+            progression_chart = plot_progression(df, selected_distance - 0.1, selected_distance + 0.1)
+
+            if progression_chart:
+                st.pyplot(progression_chart)
+            else:
+                st.warning(f"No data available for {selected_distance}K progression.")
         else:
             st.warning("No activities found.")
     except Exception as e:
@@ -42,4 +65,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+st

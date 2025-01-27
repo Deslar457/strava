@@ -6,6 +6,8 @@ from utils.visualisations import (
     plot_monthly_distance,
     plot_weekly_distance,
     plot_progression,
+    calculate_acwr,
+    last_sessions_table,
 )
 import time
 
@@ -33,7 +35,7 @@ def main():
             st.success("Activities fetched successfully!")
             df = process_activities(activities)
 
-            # Display Monthly and Weekly Distance side by side
+            # Monthly and Weekly Distance Visualisations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -44,7 +46,7 @@ def main():
                 st.subheader("Weekly Distance")
                 st.pyplot(plot_weekly_distance(df))
 
-            # Distance Range Filter for Progression (moved to main area)
+            # Distance Progression Filter
             st.subheader("Distance Progression Filter")
             selected_distance = st.selectbox(
                 "Select a Distance for Progression:",
@@ -52,7 +54,6 @@ def main():
                 index=0
             )
 
-            # Display Progression Graph
             st.subheader(f"{selected_distance}K Progression")
             progression_chart = plot_progression(df, selected_distance - 0.1, selected_distance + 0.1)
 
@@ -60,6 +61,15 @@ def main():
                 st.pyplot(progression_chart)
             else:
                 st.warning(f"No data available for {selected_distance}K progression.")
+
+            # Last 7 Sessions Table
+            st.subheader("Last 7 Sessions")
+            st.table(last_sessions_table(df))
+
+            # ACWR Table with Suggested Distance
+            st.subheader("ACWR Analysis and Recommendation")
+            acwr_table = calculate_acwr(df)
+            st.table(acwr_table)
         else:
             st.warning("No activities found.")
     except Exception as e:

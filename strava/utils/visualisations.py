@@ -18,10 +18,20 @@ def plot_monthly_distance(df):
 
 
 def plot_weekly_distance(df):
-    """Generate a bar chart for weekly distance."""
+    """Generate a bar chart for weekly distance with outlined bars."""
     weekly_distance = df.groupby("Week")["Distance (km)"].sum()
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(weekly_distance.index, weekly_distance.values, color="lightgreen", width=7)
+    
+    # Create bar plot with edges outlined
+    bars = ax.bar(
+        weekly_distance.index,
+        weekly_distance.values,
+        color="lightgreen",
+        width=7,
+        edgecolor="black",  # Add black outlines
+    )
+    
+    # Add average line
     ax.axhline(weekly_distance.mean(), color="red", linestyle="--", label="Avg Distance")
     ax.set_title("Weekly Distance", fontsize=16)
     ax.set_xlabel("Week", fontsize=12)

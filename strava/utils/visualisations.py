@@ -7,24 +7,28 @@ def plot_monthly_distance(df):
     monthly_distance = df.groupby("Month")["Distance (km)"].sum()
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.bar(monthly_distance.index, monthly_distance.values, color="skyblue", width=20)
+    ax.axhline(monthly_distance.mean(), color="red", linestyle="--", label="Avg Distance")
     ax.set_title("Monthly Distance", fontsize=16)
     ax.set_xlabel("Month", fontsize=12)
     ax.set_ylabel("Distance (km)", fontsize=12)
+    ax.legend()
     ax.grid(axis="y", linestyle="--", alpha=0.7)
     plt.xticks(rotation=45)
     return fig
 
 
 def plot_weekly_distance(df):
-    """Generate a bar chart for weekly distance."""
+    """Generate a bar chart for weekly distance with improved formatting."""
     weekly_distance = df.groupby("Week")["Distance (km)"].sum()
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(weekly_distance.index, weekly_distance.values, color="lightgreen", width=10)
+    ax.bar(weekly_distance.index, weekly_distance.values, color="lightgreen", width=4)
+    ax.axhline(weekly_distance.mean(), color="red", linestyle="--", label="Avg Distance")
     ax.set_title("Weekly Distance", fontsize=16)
     ax.set_xlabel("Week", fontsize=12)
     ax.set_ylabel("Distance (km)", fontsize=12)
+    ax.legend()
     ax.grid(axis="y", linestyle="--", alpha=0.7)
-    plt.xticks(rotation=45)
+    plt.xticks(rotation=45, fontsize=10)
     return fig
 
 
@@ -38,7 +42,7 @@ def plot_progression(df, lower_bound, upper_bound):
         fig, ax = plt.subplots(figsize=(12, 6))
         ax.plot(progression.index, progression.values, marker="o", color="blue", label="Best Time")
         ax.axhline(progression.mean(), color="red", linestyle="--", label=f"Avg: {progression.mean():.2f} min")
-        ax.set_title("Distance Progression", fontsize=16)
+        ax.set_title(f"Progression for {lower_bound:.1f}-{upper_bound:.1f} km", fontsize=16)
         ax.set_xlabel("Month", fontsize=12)
         ax.set_ylabel("Time (minutes)", fontsize=12)
         ax.legend()
@@ -48,7 +52,7 @@ def plot_progression(df, lower_bound, upper_bound):
 
 
 def calculate_acwr(df):
-    """Calculate Acute:Chronic Workload Ratio (ACWR) and generate recommendations."""
+    """Calculate ACWR and provide recommended running distance."""
     df = df.sort_values("Date")
 
     # Acute Workload (last 7 days)
@@ -62,22 +66,31 @@ def calculate_acwr(df):
     # Calculate ACWR
     acwr = acute_workload / chronic_workload if chronic_workload > 0 else 0
 
-    # Recommendation based on ACWR
+    # Recommended next session distance to maintain safe ACWR
+    max_safe_acwr = 1.5
+    target_acute = chronic_workload * max_safe_acwr
+    suggested_distance = max(0, target_acute - acute_workload)
+
+    # Recommendation text
     if acwr < 0.8:
-        recommendation = "Increase workload gradually."
-    elif 0.8 <= acwr <= 1.3:
-        recommendation = "Workload is optimal. Maintain the current training load."
+        recommendation = f"Increase workload gradually. Suggested run: {suggested_distance:.2f} km."
+    elif 0.8 <= acwr <= 1.5:
+        recommendation = f"Workload is within a safe range. Suggested run: {suggested_distance:.2f} km."
     else:
-        recommendation = "High workload! Reduce intensity to prevent injury."
+        recommendation = f"Workload is too high! Suggested run: {suggested_distance:.2f} km to reduce intensity."
 
-    # Suggested Distance for Next Session
-    desired_acwr = 1.05  # Optimal workload ratio
-    suggested_distance = chronic_workload * desired_acwr - acute_workload
-
-    # Prepare table
+    # Prepare ACWR data table
     acwr_data = pd.DataFrame({
-        "Metric": ["Acute Workload (7 days)", "Chronic Workload (28 days avg)", "ACWR", "Recommendation", "Suggested Distance for Next Session"],
-        "Value": [f"{acute_workload:.2f} km", f"{chronic_workload:.2f} km", f"{acwr:.2f}", recommendation, f"{max(suggested_distance, 0):.2f} km"]
+        "Metric": ["Acute Workload (7 days)", "Chronic Workload (28 days avg)", "ACWR", "Recommendation"],
+        "Value": [f"{acute_workload:.2f} km", f"{chronic_workload:.2f} km", f"{acwr:.2f}", recommendation]
     })
 
     return acwr_data
+
+
+def last_sessions_table(df):
+    """Prepare a table of the last 7 sessions."""
+    return df[["Date", "Distance (km)", "Time (minutes)", "Average HR"]].tail(7).reset_index(drop=True)
+
+
+

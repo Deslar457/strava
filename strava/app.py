@@ -9,6 +9,7 @@ from utils.visualisations import (
 )
 import time
 
+
 def main():
     st.set_page_config(page_title="Strava Dashboard", layout="wide")
 
@@ -32,7 +33,7 @@ def main():
             st.success("Activities fetched successfully!")
             df = process_activities(activities)
 
-            # Side-by-side Monthly and Weekly Distance
+            # Display Monthly and Weekly Distance side by side
             col1, col2 = st.columns(2)
 
             with col1:
@@ -43,15 +44,16 @@ def main():
                 st.subheader("Weekly Distance")
                 st.pyplot(plot_weekly_distance(df))
 
-            # Distance Range Filter for Progression
-            st.sidebar.header("Progression Filter")
-            selected_distance = st.sidebar.selectbox(
+            # Distance Range Filter for Progression (moved to main area)
+            st.subheader("Distance Progression Filter")
+            selected_distance = st.selectbox(
                 "Select a Distance for Progression:",
                 [5, 6, 7, 10],
                 index=0
             )
 
-            st.header(f"{selected_distance}K Progression")
+            # Display Progression Graph
+            st.subheader(f"{selected_distance}K Progression")
             progression_chart = plot_progression(df, selected_distance - 0.1, selected_distance + 0.1)
 
             if progression_chart:

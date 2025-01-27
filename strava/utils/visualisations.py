@@ -7,13 +7,14 @@ def plot_monthly_distance(df):
     monthly_distance = df.groupby("Month")["Distance (km)"].sum()
     avg_distance = monthly_distance.mean()
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(12, 6))  # Adjust the figure size
     bars = ax.bar(monthly_distance.index, monthly_distance.values, color="skyblue", width=20, edgecolor="black")
     ax.axhline(avg_distance, color="red", linestyle="--", label=f"Avg Distance: {avg_distance:.2f} km")
 
     # Annotate the average line
     ax.text(
-        0.95, avg_distance + 1, f"{avg_distance:.2f} km", color="red", fontsize=10, va="bottom", ha="right"
+        monthly_distance.index[-1], avg_distance + 1, f"{avg_distance:.2f} km",
+        color="red", fontsize=10, va="bottom", ha="right"
     )
 
     ax.set_title("Monthly Distance", fontsize=16)
@@ -21,6 +22,9 @@ def plot_monthly_distance(df):
     ax.set_ylabel("Distance (km)", fontsize=12)
     ax.legend()
     ax.grid(axis="y", linestyle="--", alpha=0.7)
+
+    # Limit the number of x-axis ticks to prevent overcrowding
+    ax.set_xticks(monthly_distance.index[::max(len(monthly_distance) // 10, 1)])
     plt.xticks(rotation=45)
     return fig
 
@@ -30,7 +34,7 @@ def plot_weekly_distance(df):
     weekly_distance = df.groupby("Week")["Distance (km)"].sum()
     avg_distance = weekly_distance.mean()
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(12, 6))  # Adjust the figure size
     bars = ax.bar(
         weekly_distance.index,
         weekly_distance.values,
@@ -42,7 +46,8 @@ def plot_weekly_distance(df):
 
     # Annotate the average line
     ax.text(
-        0.95, avg_distance + 1, f"{avg_distance:.2f} km", color="red", fontsize=10, va="bottom", ha="right"
+        weekly_distance.index[-1], avg_distance + 1, f"{avg_distance:.2f} km",
+        color="red", fontsize=10, va="bottom", ha="right"
     )
 
     ax.set_title("Weekly Distance", fontsize=16)
@@ -50,8 +55,12 @@ def plot_weekly_distance(df):
     ax.set_ylabel("Distance (km)", fontsize=12)
     ax.legend()
     ax.grid(axis="y", linestyle="--", alpha=0.7)
+
+    # Limit the number of x-axis ticks to prevent overcrowding
+    ax.set_xticks(weekly_distance.index[::max(len(weekly_distance) // 10, 1)])
     plt.xticks(rotation=45)
     return fig
+
 
 
 def plot_progression(df, lower_bound, upper_bound):

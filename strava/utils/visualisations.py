@@ -54,6 +54,25 @@ def plot_weekly_distance(df):
     return fig
 
 
+def plot_progression(df, lower_bound, upper_bound):
+    """Generate a line graph for progression of a specific distance range."""
+    progression = df[
+        (df["Distance (km)"] >= lower_bound) & (df["Distance (km)"] < upper_bound)
+    ].groupby("Month")["Time (minutes)"].min()
+
+    if not progression.empty:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(progression.index, progression.values, marker="o", color="blue", label="Best Time")
+        ax.axhline(progression.mean(), color="red", linestyle="--", label=f"Avg: {progression.mean():.2f} min")
+        ax.set_title(f"Progression for {lower_bound:.1f}-{upper_bound:.1f} km", fontsize=16)
+        ax.set_xlabel("Month", fontsize=12)
+        ax.set_ylabel("Time (minutes)", fontsize=12)
+        ax.legend()
+        ax.grid(alpha=0.5)
+        return fig
+    return None
+
+
 def calculate_workloads(df):
     """Calculate acute (7-day), chronic (28-day), and ACWR."""
     df = df.sort_values("Date")
@@ -75,6 +94,7 @@ def calculate_workloads(df):
 def last_sessions_table(df):
     """Prepare a table of the last 7 sessions."""
     return df[["Date", "Distance (km)", "Time (minutes)", "Average HR"]].tail(7).reset_index(drop=True)
+
 
 
 

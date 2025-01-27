@@ -36,13 +36,13 @@ def main():
             df = process_activities(activities)
 
             # Calculate Workloads
-            acute_workload, chronic_workload = calculate_workloads(df)
+            acute_workload, chronic_workload, acwr = calculate_workloads(df)
 
             # Display Workloads Table
             st.subheader("Workload Summary")
             workload_data = {
-                "Metric": ["Acute Workload (7 days)", "Chronic Workload (28 days avg)"],
-                "Distance (km)": [f"{acute_workload:.2f}", f"{chronic_workload:.2f}"],
+                "Metric": ["Acute Workload (7 days)", "Chronic Workload (28 days avg)", "ACWR"],
+                "Value": [f"{acute_workload:.2f} km", f"{chronic_workload:.2f} km", f"{acwr:.2f}"],
             }
             st.table(workload_data)
 

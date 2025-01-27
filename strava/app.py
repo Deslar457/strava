@@ -5,8 +5,8 @@ from utils.data_processing import process_activities
 from utils.visualisations import (
     plot_monthly_distance,
     plot_weekly_distance,
-    plot_progression,
-    calculate_acwr,
+    calculate_daily_acwr,
+    plot_daily_acwr,
     last_sessions_table,
 )
 import time
@@ -46,30 +46,15 @@ def main():
                 st.subheader("Weekly Distance")
                 st.pyplot(plot_weekly_distance(df))
 
-            # Distance Progression Filter
-            st.subheader("Distance Progression Filter")
-            selected_distance = st.selectbox(
-                "Select a Distance for Progression:",
-                [5, 6, 7, 10],
-                index=0
-            )
-
-            st.subheader(f"{selected_distance}K Progression")
-            progression_chart = plot_progression(df, selected_distance - 0.1, selected_distance + 0.1)
-
-            if progression_chart:
-                st.pyplot(progression_chart)
-            else:
-                st.warning(f"No data available for {selected_distance}K progression.")
+            # Daily ACWR with RAG Indicators
+            st.subheader("Daily ACWR Analysis")
+            acwr_df = calculate_daily_acwr(df)
+            st.table(acwr_df[["Date", "Daily Distance (km)", "Acute Workload (km)", "Chronic Workload (km)", "ACWR", "Status"]])
+            st.pyplot(plot_daily_acwr(acwr_df))
 
             # Last 7 Sessions Table
             st.subheader("Last 7 Sessions")
             st.table(last_sessions_table(df))
-
-            # ACWR Table with Suggested Distance
-            st.subheader("ACWR Analysis and Recommendation")
-            acwr_table = calculate_acwr(df)
-            st.table(acwr_table)
         else:
             st.warning("No activities found.")
     except Exception as e:

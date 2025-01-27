@@ -18,17 +18,17 @@ def plot_monthly_distance(df):
 
 
 def plot_weekly_distance(df):
-    """Generate a bar chart for weekly distance with improved formatting."""
+    """Generate a bar chart for weekly distance."""
     weekly_distance = df.groupby("Week")["Distance (km)"].sum()
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(weekly_distance.index, weekly_distance.values, color="lightgreen", width=4)
+    ax.bar(weekly_distance.index, weekly_distance.values, color="lightgreen", width=7)
     ax.axhline(weekly_distance.mean(), color="red", linestyle="--", label="Avg Distance")
     ax.set_title("Weekly Distance", fontsize=16)
     ax.set_xlabel("Week", fontsize=12)
     ax.set_ylabel("Distance (km)", fontsize=12)
     ax.legend()
     ax.grid(axis="y", linestyle="--", alpha=0.7)
-    plt.xticks(rotation=45, fontsize=10)
+    plt.xticks(rotation=45)
     return fig
 
 
@@ -51,46 +51,69 @@ def plot_progression(df, lower_bound, upper_bound):
     return None
 
 
-def calculate_acwr(df):
-    """Calculate ACWR and provide recommended running distance."""
+def calculate_daily_acwr(df):
+    """Calculate daily ACWR values with RAG status."""
+    # Ensure data is sorted by date
     df = df.sort_values("Date")
 
-    # Acute Workload (last 7 days)
-    last_7_days = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=7))]
-    acute_workload = last_7_days["Distance (km)"].sum()
+    # Calculate daily distance
+    daily_distance = df.groupby("Date")["Distance (km)"].sum()
 
-    # Chronic Workload (average weekly workload over 28 days)
-    last_28_days = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=28))]
-    chronic_workload = last_28_days["Distance (km)"].sum() / 4 if not last_28_days.empty else 0
+    # Acute workload: Sum of last 7 days
+    acute_workload = daily_distance.rolling(window=7, min_periods=1).sum()
+
+    # Chronic workload: Average of last 28 days
+    chronic_workload = daily_distance.rolling(window=28, min_periods=1).mean()
 
     # Calculate ACWR
-    acwr = acute_workload / chronic_workload if chronic_workload > 0 else 0
+    acwr = acute_workload / chronic_workload
 
-    # Recommended next session distance to maintain safe ACWR
-    max_safe_acwr = 1.5
-    target_acute = chronic_workload * max_safe_acwr
-    suggested_distance = max(0, target_acute - acute_workload)
+    # Assign RAG status
+    rag_status = pd.cut(
+        acwr,
+        bins=[0, 0.8, 1.3, float("inf")],
+        labels=["Amber (Low)", "Green (Optimal)", "Red (High)"],
+    )
 
-    # Recommendation text
-    if acwr < 0.8:
-        recommendation = f"Increase workload gradually. Suggested run: {suggested_distance:.2f} km."
-    elif 0.8 <= acwr <= 1.5:
-        recommendation = f"Workload is within a safe range. Suggested run: {suggested_distance:.2f} km."
-    else:
-        recommendation = f"Workload is too high! Suggested run: {suggested_distance:.2f} km to reduce intensity."
-
-    # Prepare ACWR data table
-    acwr_data = pd.DataFrame({
-        "Metric": ["Acute Workload (7 days)", "Chronic Workload (28 days avg)", "ACWR", "Recommendation"],
-        "Value": [f"{acute_workload:.2f} km", f"{chronic_workload:.2f} km", f"{acwr:.2f}", recommendation]
+    # Combine into a DataFrame
+    acwr_df = pd.DataFrame({
+        "Date": daily_distance.index,
+        "Daily Distance (km)": daily_distance.values,
+        "Acute Workload (km)": acute_workload.values,
+        "Chronic Workload (km)": chronic_workload.values,
+        "ACWR": acwr.values,
+        "Status": rag_status,
     })
 
-    return acwr_data
+    return acwr_df
+
+
+def plot_daily_acwr(acwr_df):
+    """Plot daily ACWR with color-coded RAG indicators."""
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    colors = acwr_df["Status"].map({
+        "Green (Optimal)": "green",
+        "Amber (Low)": "orange",
+        "Red (High)": "red"
+    })
+
+    ax.bar(acwr_df["Date"], acwr_df["ACWR"], color=colors, width=0.8)
+    ax.axhline(0.8, color="blue", linestyle="--", label="Lower Threshold (0.8)")
+    ax.axhline(1.3, color="red", linestyle="--", label="Upper Threshold (1.3)")
+    ax.set_title("Daily ACWR with RAG Indicators", fontsize=16)
+    ax.set_xlabel("Date", fontsize=12)
+    ax.set_ylabel("ACWR", fontsize=12)
+    ax.legend()
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+    plt.xticks(rotation=45, fontsize=10)
+    return fig
 
 
 def last_sessions_table(df):
     """Prepare a table of the last 7 sessions."""
     return df[["Date", "Distance (km)", "Time (minutes)", "Average HR"]].tail(7).reset_index(drop=True)
+
 
 
 

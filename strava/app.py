@@ -5,8 +5,8 @@ from utils.data_processing import process_activities
 from utils.visualisations import (
     plot_monthly_distance,
     plot_weekly_distance,
-    calculate_daily_acwr,
-    plot_daily_acwr,
+    plot_progression,
+    calculate_workloads,
     last_sessions_table,
 )
 import time
@@ -35,6 +35,17 @@ def main():
             st.success("Activities fetched successfully!")
             df = process_activities(activities)
 
+            # Calculate Workloads
+            acute_workload, chronic_workload = calculate_workloads(df)
+
+            # Display Workloads Table
+            st.subheader("Workload Summary")
+            workload_data = {
+                "Metric": ["Acute Workload (7 days)", "Chronic Workload (28 days avg)"],
+                "Distance (km)": [f"{acute_workload:.2f}", f"{chronic_workload:.2f}"],
+            }
+            st.table(workload_data)
+
             # Monthly and Weekly Distance Visualisations
             col1, col2 = st.columns(2)
 
@@ -46,11 +57,21 @@ def main():
                 st.subheader("Weekly Distance")
                 st.pyplot(plot_weekly_distance(df))
 
-            # Daily ACWR with RAG Indicators
-            st.subheader("Daily ACWR Analysis")
-            acwr_df = calculate_daily_acwr(df)
-            st.table(acwr_df[["Date", "Daily Distance (km)", "Acute Workload (km)", "Chronic Workload (km)", "ACWR", "Status"]])
-            st.pyplot(plot_daily_acwr(acwr_df))
+            # Distance Progression Filter
+            st.subheader("Distance Progression Filter")
+            selected_distance = st.selectbox(
+                "Select a Distance for Progression:",
+                [5, 6, 7, 10],
+                index=0
+            )
+
+            st.subheader(f"{selected_distance}K Progression")
+            progression_chart = plot_progression(df, selected_distance - 0.1, selected_distance + 0.1)
+
+            if progression_chart:
+                st.pyplot(progression_chart)
+            else:
+                st.warning(f"No data available for {selected_distance}K progression.")
 
             # Last 7 Sessions Table
             st.subheader("Last 7 Sessions")

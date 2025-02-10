@@ -61,6 +61,12 @@ def plot_weekly_distance(df):
     plt.xticks(rotation=45)
     return fig
 
+def format_time(minutes):
+    """Convert decimal minutes to MM:SS format."""
+    mins = int(minutes)
+    secs = round((minutes - mins) * 60)
+    return f"{mins}:{secs:02d}"
+
 
 
 def plot_progression(df, lower_bound, upper_bound):
@@ -70,9 +76,19 @@ def plot_progression(df, lower_bound, upper_bound):
     ].groupby("Month")["Time (minutes)"].min()
 
     if not progression.empty:
+        formatted_times = [format_time(t) for t in progression.values]
+
         fig, ax = plt.subplots(figsize=(12, 6))
         ax.plot(progression.index, progression.values, marker="o", color="blue", label="Best Time")
-        ax.axhline(progression.mean(), color="red", linestyle="--", label=f"Avg: {progression.mean():.2f} min")
+
+        # Annotate each point with MM:SS format
+        for i, txt in enumerate(formatted_times):
+            ax.annotate(txt, (progression.index[i], progression.iloc[i]), 
+                        textcoords="offset points", xytext=(0, 5), ha="center")
+
+        avg_time = progression.mean()
+        ax.axhline(avg_time, color="red", linestyle="--", label=f"Avg: {format_time(avg_time)}")
+        
         ax.set_title(f"Progression for {lower_bound:.1f}-{upper_bound:.1f} km", fontsize=16)
         ax.set_xlabel("Month", fontsize=12)
         ax.set_ylabel("Time (minutes)", fontsize=12)
@@ -80,6 +96,7 @@ def plot_progression(df, lower_bound, upper_bound):
         ax.grid(alpha=0.5)
         return fig
     return None
+
 
 
 def calculate_workloads(df):

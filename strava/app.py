@@ -75,7 +75,7 @@ def main():
 
             # Last 7 Sessions Table
             st.subheader("Last 7 Sessions")
-            st.table(last_sessions_table(df))
+            st.table(df[["Date", "Distance (km)", "Formatted Time", "Average HR"]].tail(7).reset_index(drop=True))
         else:
             st.warning("No activities found.")
     except Exception as e:

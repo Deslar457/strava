@@ -1,6 +1,6 @@
  # Strava Dashboard
 
-A Streamlit-based app to visualize and analyze Strava running data. Gain insights into monthly and weekly distances and track your running progress over time.
+A Streamlit-based app to visualise and analyse Strava running data. 
 
 ## Features
 
@@ -54,4 +54,4 @@ Licensed under the MIT License. See the LICENSE file for details.
 
 ## Acknowledgements
 Strava API
-Streamli
+Streamlit

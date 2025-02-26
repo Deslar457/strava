@@ -2,6 +2,40 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
+def plot_progression(df, lower_bound, upper_bound):
+    """Generate a line graph for progression of a specific distance range."""
+    progression = df[
+        (df["Distance (km)"] >= lower_bound) & (df["Distance (km)"] < upper_bound)
+    ].groupby("Month")["Time (minutes)"].min()
+
+    if not progression.empty:
+        def format_time(minutes):
+            mins = int(minutes)
+            secs = round((minutes - mins) * 60)
+            return f"{mins}:{secs:02d}"
+
+        formatted_times = [format_time(t) for t in progression.values]
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(progression.index, progression.values, marker="o", color="blue", label="Best Time")
+
+        # Annotate each point with MM:SS format
+        for i, txt in enumerate(formatted_times):
+            ax.annotate(txt, (progression.index[i], progression.iloc[i]), 
+                        textcoords="offset points", xytext=(0, 5), ha="center")
+
+        avg_time = progression.mean()
+        ax.axhline(avg_time, color="red", linestyle="--", label=f"Avg: {format_time(avg_time)}")
+        
+        ax.set_title(f"Progression for {lower_bound:.1f}-{upper_bound:.1f} km", fontsize=16)
+        ax.set_xlabel("Month", fontsize=12)
+        ax.set_ylabel("Time (minutes)", fontsize=12)
+        ax.legend()
+        ax.grid(alpha=0.5)
+        return fig
+    return None
+
+
 def plot_monthly_distance(df):
     """Generate a bar chart for monthly distance with average distance label."""
     monthly_distance = df.groupby("Month")["Distance (km)"].sum()
@@ -84,7 +118,3 @@ def calculate_workloads(df):
     chronic_workload = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=28))]["Distance (km)"].sum() / 4
     acwr = acute_workload / chronic_workload if chronic_workload > 0 else 0
     return acute_workload, chronic_workload, acwr
-
-
-
-

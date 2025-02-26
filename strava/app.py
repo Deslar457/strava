@@ -35,10 +35,8 @@ def main():
             st.success("Activities fetched successfully!")
             df = process_activities(activities)
 
-            # Calculate Workloads
+            # Workload Summary
             acute_workload, chronic_workload, acwr = calculate_workloads(df)
-
-            # Display Workloads Table
             st.subheader("Workload Summary")
             workload_data = {
                 "Metric": ["Acute Workload (7 days)", "Chronic Workload (28 days avg)", "ACWR"],
@@ -46,58 +44,22 @@ def main():
             }
             st.table(workload_data)
 
-            # Monthly and Weekly Distance Visualizations
+            # Monthly & Weekly Distance
             col1, col2 = st.columns(2)
-
             with col1:
                 st.subheader("Monthly Distance")
                 st.pyplot(plot_monthly_distance(df))
-
             with col2:
                 st.subheader("Weekly Distance")
                 st.pyplot(plot_weekly_distance(df))
 
-            # Distance Progression Filter
-            st.subheader("Distance Progression Filter")
-            selected_distance = st.selectbox(
-                "Select a Distance for Progression:",
-                [5, 6, 7, 10],
-                index=0
-            )
+            # Distance Progression
+            selected_distance = st.selectbox("Select a Distance for Progression:", [5, 6, 7, 10])
+            st.pyplot(plot_progression(df, selected_distance - 0.1, selected_distance + 0.1))
 
-            st.subheader(f"{selected_distance}K Progression")
-            progression_chart = plot_progression(df, selected_distance - 0.1, selected_distance + 0.1)
-
-            if progression_chart:
-                st.pyplot(progression_chart)
-            else:
-                st.warning(f"No data available for {selected_distance}K progression.")
-
-            # **New Pace vs. Heart Rate Chart**
-            st.subheader("Pace vs. Heart Rate by Month")
-
-            selected_hr_distance = st.selectbox(
-                "Select a Distance for Pace vs. Heart Rate Analysis:",
-                [5, 6, 7, 8],
-                index=0
-            )
-
-            pace_hr_chart = plot_pace_vs_hr(df, selected_hr_distance - 0.1, selected_hr_distance + 0.1)
-
-            if pace_hr_chart:
-                st.pyplot(pace_hr_chart)
-            else:
-                st.warning(f"No data available for {selected_hr_distance}K pace vs. heart rate analysis.")
-
-            # Last 7 Sessions Table
-            st.subheader("Last 7 Sessions")
-            st.table(df[["Date", "Distance (km)", "Formatted Time", "Average HR"]].tail(7).reset_index(drop=True))
-        else:
-            st.warning("No activities found.")
     except Exception as e:
         st.error(f"Error fetching activities: {e}")
 
 
 if __name__ == "__main__":
     main()
-

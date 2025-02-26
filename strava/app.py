@@ -72,7 +72,7 @@ def main():
             st.subheader("Pace vs. Heart Rate by Month")
             selected_hr_distance = st.selectbox(
                 "Select a Distance for Pace vs. Heart Rate Analysis:",
-                [5, 6, 7, 8],
+                [5, 6, 7, 8, 10],
                 index=0
             )
             pace_hr_chart = plot_pace_vs_hr(df, selected_hr_distance - 0.1, selected_hr_distance + 0.1)

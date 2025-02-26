@@ -7,7 +7,7 @@ from utils.visualisations import (
     plot_weekly_distance,
     plot_progression,
     calculate_workloads,
-    last_sessions_table,
+    plot_pace_vs_hr,  # Import new function
 )
 import time
 
@@ -46,7 +46,7 @@ def main():
             }
             st.table(workload_data)
 
-            # Monthly and Weekly Distance Visualisations
+            # Monthly and Weekly Distance Visualizations
             col1, col2 = st.columns(2)
 
             with col1:
@@ -73,6 +73,22 @@ def main():
             else:
                 st.warning(f"No data available for {selected_distance}K progression.")
 
+            # **New Pace vs. Heart Rate Chart**
+            st.subheader("Pace vs. Heart Rate by Month")
+
+            selected_hr_distance = st.selectbox(
+                "Select a Distance for Pace vs. Heart Rate Analysis:",
+                [5, 6, 7, 8],
+                index=0
+            )
+
+            pace_hr_chart = plot_pace_vs_hr(df, selected_hr_distance - 0.1, selected_hr_distance + 0.1)
+
+            if pace_hr_chart:
+                st.pyplot(pace_hr_chart)
+            else:
+                st.warning(f"No data available for {selected_hr_distance}K pace vs. heart rate analysis.")
+
             # Last 7 Sessions Table
             st.subheader("Last 7 Sessions")
             st.table(df[["Date", "Distance (km)", "Formatted Time", "Average HR"]].tail(7).reset_index(drop=True))
@@ -84,3 +100,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

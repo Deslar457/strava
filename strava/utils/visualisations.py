@@ -1,5 +1,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 
 def plot_progression(df, lower_bound, upper_bound):
@@ -114,7 +118,6 @@ def plot_pace_vs_hr(df, lower_bound, upper_bound):
         ax1.set_title(f"Pace vs. Heart Rate for {lower_bound}K - {upper_bound}K", fontsize=16)
         ax1.grid(alpha=0.5)
         fig.tight_layout()
-
         plt.show()
         return fig
     return None
@@ -127,3 +130,31 @@ def calculate_workloads(df):
     chronic_workload = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=28))]["Distance (km)"].sum() / 4
     acwr = acute_workload / chronic_workload if chronic_workload > 0 else 0
     return acute_workload, chronic_workload, acwr
+
+
+
+def plot_weekly_rolling_distance(df, window=4):
+    """Plot a rolling average of weekly distance."""
+    
+    # Ensure Date column is in datetime format
+    df["Date"] = pd.to_datetime(df["Date"])
+    
+    # Group by week (sum distance per week)
+    df["Week"] = df["Date"].dt.to_period("W").apply(lambda r: r.start_time)
+    weekly_data = df.groupby("Week")["Distance (km)"].sum().reset_index()
+
+    # Compute rolling average
+    weekly_data["Rolling Avg (km)"] = weekly_data["Distance (km)"].rolling(window=window, min_periods=1).mean()
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(weekly_data["Week"], weekly_data["Distance (km)"], marker="o", linestyle="-", label="Weekly Distance")
+    ax.plot(weekly_data["Week"], weekly_data["Rolling Avg (km)"], marker="s", linestyle="--", color="red", label=f"{window}-Week Rolling Avg")
+    
+    ax.set_xlabel("Week", fontsize=12)
+    ax.set_ylabel("Distance (km)", fontsize=12)
+    ax.set_title(f"Weekly Distance with {window}-Week Rolling Average", fontsize=16)
+    ax.legend()
+    ax.grid(alpha=0.5)
+    plt.show()
+    return fig

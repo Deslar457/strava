@@ -2,12 +2,13 @@ import streamlit as st
 from services.strava_api import refresh_access_token, fetch_activities
 from services.config import client_id, client_secret, refresh_token
 from utils.data_processing import process_activities
+from utils.visualisations import plot_weekly_rolling_distance
 from utils.visualisations import (
     plot_monthly_distance,
     plot_weekly_distance,
     plot_progression,
     calculate_workloads,
-    plot_pace_vs_hr,  # ✅ Ensure this is imported
+    plot_pace_vs_hr, 
 )
 import time
 
@@ -21,7 +22,7 @@ def main():
     # Refresh the access token
     try:
         access_token = refresh_access_token(refresh_token, client_id, client_secret)
-        st.success("Access token refreshed successfully!")
+        st.success("Access token refreshed successfully")
     except Exception as e:
         st.error(f"Error refreshing token: {e}")
         return
@@ -32,7 +33,7 @@ def main():
         activities = fetch_activities(access_token, start_date)
 
         if activities:
-            st.success("Activities fetched successfully!")
+            st.success("Activities fetched successfully")
             df = process_activities(activities)
 
             # Workload Summary
@@ -67,6 +68,17 @@ def main():
                 st.pyplot(progression_chart)
             else:
                 st.warning(f"No data available for {selected_distance}K progression.")
+
+            # Rolling Average of Weekly Distance
+            st.subheader("Rolling Average of Weekly Distance")
+            rolling_avg_chart = plot_weekly_rolling_distance(df)
+
+            if rolling_avg_chart:
+                st.pyplot(rolling_avg_chart)
+            else:
+                st.warning("No data available for weekly rolling average.")
+
+
 
             # ✅ **New Pace vs. Heart Rate Chart**
             st.subheader("Pace vs. Heart Rate by Month")

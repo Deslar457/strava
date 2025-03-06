@@ -71,6 +71,11 @@ def plot_weekly_distance(df):
     plt.xticks(rotation=45)
     return fig
 
+def format_pace(y, _):
+    """Convert decimal minutes to mm:ss format for plotting."""
+    minutes = int(y)
+    seconds = int((y - minutes) * 60)
+    return f"{minutes}:{seconds:02d}"
 
 def plot_pace_vs_hr(df, lower_bound, upper_bound):
     """Plot Pace vs. Heart Rate for a selected distance range each month."""
@@ -97,6 +102,9 @@ def plot_pace_vs_hr(df, lower_bound, upper_bound):
         ax1.tick_params(axis="y", labelcolor="blue")
         ax1.invert_yaxis()  # Faster times at the top
 
+        # Convert y-axis labels to mm:ss format
+        ax1.yaxis.set_major_formatter(plt.FuncFormatter(format_pace))
+
         # Second y-axis for Heart Rate
         ax2 = ax1.twinx()
         ax2.set_ylabel("Avg HR (bpm)", color="red", fontsize=12)
@@ -107,6 +115,7 @@ def plot_pace_vs_hr(df, lower_bound, upper_bound):
         ax1.grid(alpha=0.5)
         fig.tight_layout()
 
+        plt.show()
         return fig
     return None
 

@@ -162,26 +162,36 @@ def plot_weekly_rolling_distance(df, window=4):
 
 
     
+
 def plot_hr_vs_pace_correlation(df):
-    """Plot correlation between heart rate and pace."""
-    
+    """Plot correlation between heart rate and pace, only for sessions between 3:00-6:00 min/km."""
+
     # Ensure time and distance are in the correct units
     df = df.copy()  # Avoid modifying the original DataFrame
     df["Pace (min/km)"] = df["Time (minutes)"] / df["Distance (km)"]
 
-    # Compute correlation coefficient
-    correlation = df["Pace (min/km)"].corr(df["Average HR"])
+    # Filter data to only include paces between 3:00 and 6:00 min/km
+    df_filtered = df[(df["Pace (min/km)"] >= 3.0) & (df["Pace (min/km)"] <= 6.0)]
+
+    if df_filtered.empty:
+        return None  # If no data remains, return nothing
+
+    # Compute correlation coefficient (r-value)
+    correlation = df_filtered["Pace (min/km)"].corr(df_filtered["Average HR"])
 
     # Create scatter plot
     fig, ax = plt.subplots(figsize=(10, 6))
-    sns.scatterplot(data=df, x="Pace (min/km)", y="Average HR", alpha=0.6, ax=ax)
+    sns.scatterplot(data=df_filtered, x="Pace (min/km)", y="Average HR", alpha=0.6, ax=ax)
 
     # Regression line
-    sns.regplot(data=df, x="Pace (min/km)", y="Average HR", scatter=False, ax=ax, color="red", line_kws={"alpha": 0.7})
+    sns.regplot(data=df_filtered, x="Pace (min/km)", y="Average HR", scatter=False, ax=ax, color="red", line_kws={"alpha": 0.7})
+
+    # Add correlation value on the chart
+    ax.text(5.5, df_filtered["Average HR"].max(), f"r = {correlation:.2f}", fontsize=12, color="black", ha="right")
 
     ax.set_xlabel("Pace (min/km)", fontsize=12)
     ax.set_ylabel("Average Heart Rate (bpm)", fontsize=12)
-    ax.set_title(f"Heart Rate vs. Pace (Correlation: {correlation:.2f})", fontsize=14)
+    ax.set_title("Heart Rate vs. Pace (Filtered: 3:00 - 6:00 min/km)", fontsize=14)
     ax.grid(alpha=0.3)
-    plt.show()
+    
     return fig

@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 import sys
 import os
 
@@ -156,5 +157,31 @@ def plot_weekly_rolling_distance(df, window=4):
     ax.set_title(f"Weekly Distance with {window}-Week Rolling Average", fontsize=16)
     ax.legend()
     ax.grid(alpha=0.5)
+    plt.show()
+    return fig
+
+
+    
+def plot_hr_vs_pace_correlation(df):
+    """Plot correlation between heart rate and pace."""
+    
+    # Ensure time and distance are in the correct units
+    df = df.copy()  # Avoid modifying the original DataFrame
+    df["Pace (min/km)"] = df["Time (minutes)"] / df["Distance (km)"]
+
+    # Compute correlation coefficient
+    correlation = df["Pace (min/km)"].corr(df["Average HR"])
+
+    # Create scatter plot
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.scatterplot(data=df, x="Pace (min/km)", y="Average HR", alpha=0.6, ax=ax)
+
+    # Regression line
+    sns.regplot(data=df, x="Pace (min/km)", y="Average HR", scatter=False, ax=ax, color="red", line_kws={"alpha": 0.7})
+
+    ax.set_xlabel("Pace (min/km)", fontsize=12)
+    ax.set_ylabel("Average Heart Rate (bpm)", fontsize=12)
+    ax.set_title(f"Heart Rate vs. Pace (Correlation: {correlation:.2f})", fontsize=14)
+    ax.grid(alpha=0.3)
     plt.show()
     return fig

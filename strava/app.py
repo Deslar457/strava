@@ -2,20 +2,17 @@ import streamlit as st
 from services.strava_api import refresh_access_token, fetch_activities
 from services.config import client_id, client_secret, refresh_token
 from utils.data_processing import process_activities
-from utils.visualisations import plot_weekly_rolling_distance
 from utils.visualisations import (
     plot_monthly_distance,
     plot_weekly_distance,
     plot_progression,
     calculate_workloads,
-    plot_pace_vs_hr, 
+    plot_pace_vs_hr,
+    plot_weekly_rolling_distance,
+    plot_hr_vs_pace_correlation
 )
 import time
 
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 
 def main():
@@ -83,9 +80,17 @@ def main():
             else:
                 st.warning("No data available for weekly rolling average.")
 
+            # Heart Rate vs. Pace Correlation
+            st.subheader("Heart Rate vs. Pace Correlation")
+            correlation_chart = plot_hr_vs_pace_correlation(df)
+
+            if correlation_chart:
+                st.pyplot(correlation_chart)
+            else:
+                st.warning("Not enough data to compute correlation.")
 
 
-            # ✅ **New Pace vs. Heart Rate Chart**
+            # ** Pace vs. Heart Rate Chart**
             st.subheader("Pace vs. Heart Rate by Month")
             selected_hr_distance = st.selectbox(
                 "Select a Distance for Pace vs. Heart Rate Analysis:",

@@ -12,6 +12,11 @@ from utils.visualisations import (
 )
 import time
 
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 
 def main():
     st.set_page_config(page_title="Strava Dashboard", layout="wide")

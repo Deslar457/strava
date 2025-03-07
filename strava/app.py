@@ -9,7 +9,6 @@ from utils.visualisations import (
     calculate_workloads,
     plot_pace_vs_hr,
     plot_weekly_rolling_distance,
-    plot_hr_vs_pace_correlation
 )
 import time
 

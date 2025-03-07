@@ -13,7 +13,7 @@ from utils.visualisations import (
 import time
 
 
-
+##funcs
 def main():
     st.set_page_config(page_title="Strava Dashboard", layout="wide")
 

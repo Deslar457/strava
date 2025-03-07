@@ -80,14 +80,7 @@ def main():
             else:
                 st.warning("No data available for weekly rolling average.")
 
-            # Heart Rate vs. Pace Correlation
-            st.subheader("Heart Rate vs. Pace Correlation")
-            correlation_chart = plot_hr_vs_pace_correlation(df)
-
-            if correlation_chart:
-                st.pyplot(correlation_chart)
-            else:
-                st.warning("Not enough data to compute correlation.")
+            
 
 
             # ** Pace vs. Heart Rate Chart**

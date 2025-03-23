@@ -9,6 +9,7 @@ from utils.visualisations import (
     calculate_workloads,
     plot_pace_vs_hr,
     plot_weekly_rolling_distance,
+    predict_10k_performance
 )
 import time
 import os
@@ -99,6 +100,23 @@ def main():
             # Last 7 Sessions Table
             st.subheader("Last 7 Sessions")
             st.table(df[["Date", "Distance (km)", "Formatted Time", "Average HR"]].tail(7).reset_index(drop=True))
+
+
+            
+
+                #    -------------------------------
+            # 🤖 ML Insights: 10K Prediction
+            # -------------------------------
+            st.header("🤖 ML Insights: 10K Prediction")
+
+            prediction, error = predict_10k_performance(df)
+
+            if prediction:
+                st.success(f"Predicted 10K Time: {prediction} minutes")
+                st.caption(f"Model MAE: ±{error} minutes")
+            else:
+                st.warning(error)
+
 
             # -------------------------------
             # 📅 Weekly Training Plan Section

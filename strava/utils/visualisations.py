@@ -2,6 +2,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import sys
 import os
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+import pandas as pd
+import numpy as np
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
@@ -158,6 +163,55 @@ def plot_weekly_rolling_distance(df, window=4):
     ax.grid(alpha=0.5)
     plt.show()
     return fig
+
+
+
+
+def predict_10k_performance(df):
+    df = df.copy()
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df.sort_values("Date")
+
+    # Calculate pace
+    df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
+
+    # Calculate pace:HR ratio
+    df["Pace/HR"] = df["Pace"] / df["Average HR"]
+
+    # Rolling 7-day mileage
+    df["7d_km"] = df.set_index("Date")["Distance (km)"].rolling("7d").sum().reset_index(drop=True)
+
+    # Filter for 10K-ish runs
+    tenk_df = df[(df["Distance (km)"] >= 9.8) & (df["Distance (km)"] <= 10.2)].dropna()
+
+    if len(tenk_df) < 5:
+        return None, "Not enough 10K runs to train the model."
+
+    # Features and target
+    features = tenk_df[["Distance (km)", "Pace", "Average HR", "Pace/HR", "7d_km"]]
+    target = tenk_df["Time (minutes)"]
+
+    # Split and train
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.25, random_state=42)
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Predict next 10K time using most recent data
+    latest = df.iloc[-1]
+    latest_features = pd.DataFrame([{
+        "Distance (km)": 10.0,
+        "Pace": latest["Time (minutes)"] / latest["Distance (km)"],
+        "Average HR": latest["Average HR"],
+        "Pace/HR": (latest["Time (minutes)"] / latest["Distance (km)"]) / latest["Average HR"],
+        "7d_km": df.set_index("Date")["Distance (km)"].rolling("7d").sum().iloc[-1]
+    }])
+
+    prediction = model.predict(latest_features)[0]
+    mae = mean_absolute_error(y_test, model.predict(X_test))
+
+    return round(prediction, 1), round(mae, 1)
+
+
 
 
     

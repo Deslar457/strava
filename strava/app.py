@@ -14,6 +14,7 @@ import time
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 
 def main():
@@ -98,6 +99,30 @@ def main():
             # Last 7 Sessions Table
             st.subheader("Last 7 Sessions")
             st.table(df[["Date", "Distance (km)", "Formatted Time", "Average HR"]].tail(7).reset_index(drop=True))
+
+            # -------------------------------
+            # 📅 Weekly Training Plan Section
+            # -------------------------------
+            st.header("📅 Weekly Training Plan")
+
+            training_plan = {
+                "Monday": "10–15K Long Easy Run",
+                "Tuesday": "2K Intervals × 4",
+                "Wednesday": "Rest or Recovery",
+                "Thursday": "8–12K Steady Run",
+                "Friday": "Rest or Cross Training",
+                "Saturday": "Mixed Intervals: 6, 5, 4, 3, 2 × 2",
+                "Sunday": "Optional Easy Run or Rest"
+            }
+
+            today = datetime.today().strftime("%A")
+
+            st.subheader(f"Today's Session: {today}")
+            st.write(training_plan.get(today, "No plan found."))
+
+            with st.expander("View Full Weekly Plan"):
+                for day, session in training_plan.items():
+                    st.markdown(f"**{day}:** {session}")
 
             # -----------------------------------
             # 📉 Bodyweight & BMI Tracker Section

@@ -9,7 +9,8 @@ from utils.visualisations import (
     calculate_workloads,
     plot_pace_vs_hr,
     plot_weekly_rolling_distance,
-    predict_10k_performance
+    predict_10k_performance,
+    predict_10k_performance_with_plot
 )
 import time
 import os
@@ -106,14 +107,16 @@ def main():
             # -------------------------------
             st.header("🤖 ML Insights: 10K Prediction")
 
-            prediction, error = predict_10k_performance(df)
+            fig, mae = predict_10k_performance_with_plot(df)
 
-            if prediction:
-                st.success(f"Predicted 10K Time: {prediction} minutes")
-                st.caption(f"Model MAE: ±{error} minutes")
+
+            if fig:
+                st.pyplot(fig)
+                st.caption(f"Model MAE: ±{mae} minutes")
             else:
-                st.warning(error)
-
+                st.warning(mae)
+                
+           
             # -------------------------------
             # 📅 Weekly Training Plan Section
             # -------------------------------

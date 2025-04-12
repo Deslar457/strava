@@ -101,10 +101,7 @@ def main():
             st.subheader("Last 7 Sessions")
             st.table(df[["Date", "Distance (km)", "Formatted Time", "Average HR"]].tail(7).reset_index(drop=True))
 
-
-            
-
-                #    -------------------------------
+            # -------------------------------
             # 🤖 ML Insights: 10K Prediction
             # -------------------------------
             st.header("🤖 ML Insights: 10K Prediction")
@@ -116,7 +113,6 @@ def main():
                 st.caption(f"Model MAE: ±{error} minutes")
             else:
                 st.warning(error)
-
 
             # -------------------------------
             # 📅 Weekly Training Plan Section
@@ -142,7 +138,8 @@ def main():
                 for day, session in training_plan.items():
                     st.markdown(f"**{day}:** {session}")
 
-        
+    except Exception as e:
+        st.error(f"Error fetching activities: {e}")
 
 
 if __name__ == "__main__":

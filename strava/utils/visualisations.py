@@ -1,12 +1,11 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import sys
-import os
+from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 def plot_progression(df, lower_bound, upper_bound):
     progression = df[
@@ -38,6 +37,7 @@ def plot_progression(df, lower_bound, upper_bound):
         return fig
     return None
 
+
 def plot_monthly_distance(df):
     monthly_distance = df.groupby("Month")["Distance (km)"].sum()
     avg_distance = monthly_distance.mean()
@@ -52,6 +52,7 @@ def plot_monthly_distance(df):
     ax.grid(axis="y", linestyle="--", alpha=0.7)
     plt.xticks(rotation=45)
     return fig
+
 
 def plot_weekly_distance(df):
     weekly_distance = df.groupby("Week")["Distance (km)"].sum()
@@ -68,10 +69,12 @@ def plot_weekly_distance(df):
     plt.xticks(rotation=45)
     return fig
 
+
 def format_pace(y, _):
     minutes = int(y)
     seconds = int((y - minutes) * 60)
     return f"{minutes}:{seconds:02d}"
+
 
 def plot_pace_vs_hr(df, lower_bound, upper_bound):
     filtered_df = df[
@@ -106,12 +109,14 @@ def plot_pace_vs_hr(df, lower_bound, upper_bound):
         return fig
     return None
 
+
 def calculate_workloads(df):
     df = df.sort_values("Date")
     acute_workload = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=7))]["Distance (km)"].sum()
     chronic_workload = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=28))]["Distance (km)"].sum() / 4
     acwr = acute_workload / chronic_workload if chronic_workload > 0 else 0
     return acute_workload, chronic_workload, acwr
+
 
 def plot_weekly_rolling_distance(df, window=4):
     df["Date"] = pd.to_datetime(df["Date"])
@@ -129,26 +134,33 @@ def plot_weekly_rolling_distance(df, window=4):
     ax.grid(alpha=0.5)
     return fig
 
-def predict_10k_performance(df):
+
+def predict_10k_from_all_models(df):
     df = df.copy()
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date")
     df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
     df["Pace/HR"] = df["Pace"] / df["Average HR"]
     df["7d_km"] = df.set_index("Date")["Distance (km)"].rolling("7d").sum().reset_index(drop=True)
+
     tenk_df = df[(df["Distance (km)"] >= 9.8) & (df["Distance (km)"] <= 10.2)].dropna()
 
     if len(tenk_df) < 5:
-        return None, "Not enough 10K runs to train the model."
+        return None, "Not enough 10K runs to train the models."
 
     features = tenk_df[["Distance (km)", "Pace", "Average HR", "Pace/HR", "7d_km"]]
     target = tenk_df["Time (minutes)"]
     X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.25, random_state=42)
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
 
+    models = {
+        "Linear Regression": LinearRegression(),
+        "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42),
+        "XGBoost": XGBRegressor(n_estimators=100, random_state=42, verbosity=0)
+    }
+
+    results = []
     latest = df.iloc[-1]
-    latest_features = pd.DataFrame([{
+    latest_input = pd.DataFrame([{
         "Distance (km)": 10.0,
         "Pace": latest["Time (minutes)"] / latest["Distance (km)"],
         "Average HR": latest["Average HR"],
@@ -156,44 +168,10 @@ def predict_10k_performance(df):
         "7d_km": df.set_index("Date")["Distance (km)"].rolling("7d").sum().iloc[-1]
     }])
 
-    prediction = model.predict(latest_features)[0]
-    mae = mean_absolute_error(y_test, model.predict(X_test))
-    return round(prediction, 1), round(mae, 1)
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        prediction = model.predict(latest_input)[0]
+        mae = mean_absolute_error(y_test, model.predict(X_test))
+        results.append({"Model": name, "Predicted Time (min)": round(prediction, 2), "MAE (±min)": round(mae, 2)})
 
-def predict_10k_performance_with_plot(df):
-    df = df.copy()
-    df["Date"] = pd.to_datetime(df["Date"])
-    df = df.sort_values("Date")
-    df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
-    df["Pace/HR"] = df["Pace"] / df["Average HR"]
-    df["7d_km"] = df.set_index("Date")["Distance (km)"].rolling("7d").sum().reset_index(drop=True)
-
-    tenk_df = df[(df["Distance (km)"] >= 9.8) & (df["Distance (km)"] <= 10.2)].dropna()
-
-    if len(tenk_df) < 5:
-        return None, "Not enough 10K runs to train the model."
-
-    features = tenk_df[["Distance (km)", "Pace", "Average HR", "Pace/HR", "7d_km"]]
-    target = tenk_df["Time (minutes)"]
-
-    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.25, random_state=42)
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-
-    y_pred = model.predict(X_test)
-    mae = mean_absolute_error(y_test, y_pred)
-
-    # Plot actual vs predicted
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.scatter(y_test, y_pred, alpha=0.8, label="Predicted")
-    ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', label="Perfect Prediction")
-    ax.set_xlabel("Actual 10K Time (min)")
-    ax.set_ylabel("Predicted 10K Time (min)")
-    ax.set_title(f"10K: Actual vs Predicted (MAE: ±{mae:.1f} min)")
-    ax.legend()
-    ax.grid(alpha=0.3)
-
-    return fig, round(mae, 1)
-
-
-    
+    return pd.DataFrame(results)

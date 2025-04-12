@@ -1,6 +1,7 @@
- streamlit
+streamlit
 pandas
 matplotlib
 requests
 python-dotenv
 scikit-learn
+xgboost

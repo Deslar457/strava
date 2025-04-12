@@ -1,3 +1,7 @@
+# -----------------------------
+# visualisations.py (FULL FILE)
+# -----------------------------
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
@@ -8,25 +12,18 @@ from sklearn.metrics import mean_absolute_error
 
 
 def plot_progression(df, lower_bound, upper_bound):
-    progression = df[
-        (df["Distance (km)"] >= lower_bound) & (df["Distance (km)"] < upper_bound)
-    ].groupby("Month")["Time (minutes)"].min()
-
+    progression = df[(df["Distance (km)"] >= lower_bound) & (df["Distance (km)"] < upper_bound)]
+    progression = progression.groupby("Month")["Time (minutes)"].min()
     if not progression.empty:
         def format_time(minutes):
             mins = int(minutes)
             secs = round((minutes - mins) * 60)
             return f"{mins}:{secs:02d}"
-
         formatted_times = [format_time(t) for t in progression.values]
-
         fig, ax = plt.subplots(figsize=(12, 6))
         ax.plot(progression.index, progression.values, marker="o", color="blue", label="Best Time")
-
         for i, txt in enumerate(formatted_times):
-            ax.annotate(txt, (progression.index[i], progression.iloc[i]), 
-                        textcoords="offset points", xytext=(0, 5), ha="center")
-
+            ax.annotate(txt, (progression.index[i], progression.iloc[i]), textcoords="offset points", xytext=(0, 5), ha="center")
         avg_time = progression.mean()
         ax.axhline(avg_time, color="red", linestyle="--", label=f"Avg: {format_time(avg_time)}")
         ax.set_title(f"Progression for {lower_bound:.1f}-{upper_bound:.1f} km", fontsize=16)
@@ -41,13 +38,12 @@ def plot_progression(df, lower_bound, upper_bound):
 def plot_monthly_distance(df):
     monthly_distance = df.groupby("Month")["Distance (km)"].sum()
     avg_distance = monthly_distance.mean()
-
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(monthly_distance.index, monthly_distance.values, color="skyblue", width=20, edgecolor="black")
+    ax.bar(monthly_distance.index, monthly_distance.values, color="skyblue", edgecolor="black")
     ax.axhline(avg_distance, color="red", linestyle="--", label=f"Avg Distance: {avg_distance:.2f} km")
     ax.set_title("Monthly Distance", fontsize=16)
-    ax.set_xlabel("Month", fontsize=12)
-    ax.set_ylabel("Distance (km)", fontsize=12)
+    ax.set_xlabel("Month")
+    ax.set_ylabel("Distance (km)")
     ax.legend()
     ax.grid(axis="y", linestyle="--", alpha=0.7)
     plt.xticks(rotation=45)
@@ -57,13 +53,12 @@ def plot_monthly_distance(df):
 def plot_weekly_distance(df):
     weekly_distance = df.groupby("Week")["Distance (km)"].sum()
     avg_distance = weekly_distance.mean()
-
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.bar(weekly_distance.index, weekly_distance.values, color="lightgreen", width=7, edgecolor="black")
+    ax.bar(weekly_distance.index, weekly_distance.values, color="lightgreen", edgecolor="black")
     ax.axhline(avg_distance, color="red", linestyle="--", label=f"Avg Distance: {avg_distance:.2f} km")
     ax.set_title("Weekly Distance", fontsize=16)
-    ax.set_xlabel("Week", fontsize=12)
-    ax.set_ylabel("Distance (km)", fontsize=12)
+    ax.set_xlabel("Week")
+    ax.set_ylabel("Distance (km)")
     ax.legend()
     ax.grid(axis="y", linestyle="--", alpha=0.7)
     plt.xticks(rotation=45)
@@ -77,33 +72,22 @@ def format_pace(y, _):
 
 
 def plot_pace_vs_hr(df, lower_bound, upper_bound):
-    filtered_df = df[
-        (df["Distance (km)"] >= lower_bound) & (df["Distance (km)"] < upper_bound)
-    ]
-
+    filtered_df = df[(df["Distance (km)"] >= lower_bound) & (df["Distance (km)"] < upper_bound)]
     if not filtered_df.empty:
-        monthly_data = filtered_df.groupby("Month").agg({
-            "Time (minutes)": "sum",
-            "Distance (km)": "sum",
-            "Average HR": "mean"
-        }).reset_index()
-
+        monthly_data = filtered_df.groupby("Month").agg({"Time (minutes)": "sum", "Distance (km)": "sum", "Average HR": "mean"}).reset_index()
         monthly_data["Pace (min/km)"] = monthly_data["Time (minutes)"] / monthly_data["Distance (km)"]
-
         fig, ax1 = plt.subplots(figsize=(12, 6))
-        ax1.set_xlabel("Month", fontsize=12)
-        ax1.set_ylabel("Pace (min/km)", color="blue", fontsize=12)
-        ax1.plot(monthly_data["Month"], monthly_data["Pace (min/km)"], marker="o", color="blue", label="Pace")
+        ax1.set_xlabel("Month")
+        ax1.set_ylabel("Pace (min/km)", color="blue")
+        ax1.plot(monthly_data["Month"], monthly_data["Pace (min/km)"], marker="o", color="blue")
         ax1.tick_params(axis="y", labelcolor="blue")
         ax1.invert_yaxis()
         ax1.yaxis.set_major_formatter(plt.FuncFormatter(format_pace))
-
         ax2 = ax1.twinx()
-        ax2.set_ylabel("Avg HR (bpm)", color="red", fontsize=12)
-        ax2.plot(monthly_data["Month"], monthly_data["Average HR"], marker="s", color="red", linestyle="--", label="Heart Rate")
+        ax2.set_ylabel("Avg HR (bpm)", color="red")
+        ax2.plot(monthly_data["Month"], monthly_data["Average HR"], marker="s", color="red", linestyle="--")
         ax2.tick_params(axis="y", labelcolor="red")
-
-        ax1.set_title(f"Pace vs. Heart Rate for {lower_bound}K - {upper_bound}K", fontsize=16)
+        ax1.set_title(f"Pace vs. Heart Rate for {lower_bound}K - {upper_bound}K")
         ax1.grid(alpha=0.5)
         fig.tight_layout()
         return fig
@@ -112,29 +96,28 @@ def plot_pace_vs_hr(df, lower_bound, upper_bound):
 
 def calculate_workloads(df):
     df = df.sort_values("Date")
-    acute_workload = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=7))]["Distance (km)"].sum()
-    chronic_workload = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=28))]["Distance (km)"].sum() / 4
-    acwr = acute_workload / chronic_workload if chronic_workload > 0 else 0
-    return acute_workload, chronic_workload, acwr
+    acute = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=7))]["Distance (km)"].sum()
+    chronic = df[df["Date"] >= (df["Date"].max() - pd.Timedelta(days=28))]["Distance (km)"].sum() / 4
+    acwr = acute / chronic if chronic > 0 else 0
+    return acute, chronic, acwr
 
 
 def plot_weekly_rolling_distance(df, window=4):
     df["Date"] = pd.to_datetime(df["Date"])
     df["Week"] = df["Date"].dt.to_period("W").apply(lambda r: r.start_time)
-    weekly_data = df.groupby("Week")["Distance (km)"].sum().reset_index()
-    weekly_data["Rolling Avg (km)"] = weekly_data["Distance (km)"].rolling(window=window, min_periods=1).mean()
-
+    weekly = df.groupby("Week")["Distance (km)"].sum().reset_index()
+    weekly["Rolling Avg (km)"] = weekly["Distance (km)"].rolling(window=window, min_periods=1).mean()
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(weekly_data["Week"], weekly_data["Distance (km)"], marker="o", linestyle="-", label="Weekly Distance")
-    ax.plot(weekly_data["Week"], weekly_data["Rolling Avg (km)"], marker="s", linestyle="--", color="red", label=f"{window}-Week Rolling Avg")
-    ax.set_xlabel("Week", fontsize=12)
-    ax.set_ylabel("Distance (km)", fontsize=12)
-    ax.set_title(f"Weekly Distance with {window}-Week Rolling Average", fontsize=16)
+    ax.plot(weekly["Week"], weekly["Distance (km)"], marker="o", label="Weekly Distance")
+    ax.plot(weekly["Week"], weekly["Rolling Avg (km)"], marker="s", linestyle="--", color="red", label=f"{window}-Week Rolling Avg")
+    ax.set_xlabel("Week")
+    ax.set_ylabel("Distance (km)")
+    ax.set_title("Weekly Distance with Rolling Average")
     ax.legend()
     ax.grid(alpha=0.5)
     return fig
 
-
+##function for predction variou smodels
 def predict_10k_from_all_models(df):
     df = df.copy()
     df["Date"] = pd.to_datetime(df["Date"])
@@ -144,7 +127,6 @@ def predict_10k_from_all_models(df):
     df["7d_km"] = df.set_index("Date")["Distance (km)"].rolling("7d").sum().reset_index(drop=True)
 
     tenk_df = df[(df["Distance (km)"] >= 9.8) & (df["Distance (km)"] <= 10.2)].dropna()
-
     if len(tenk_df) < 5:
         return None, "Not enough 10K runs to train the models."
 

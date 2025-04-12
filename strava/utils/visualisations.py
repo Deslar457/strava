@@ -160,6 +160,40 @@ def predict_10k_performance(df):
     mae = mean_absolute_error(y_test, model.predict(X_test))
     return round(prediction, 1), round(mae, 1)
 
+def predict_10k_performance_with_plot(df):
+    df = df.copy()
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df.sort_values("Date")
+    df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
+    df["Pace/HR"] = df["Pace"] / df["Average HR"]
+    df["7d_km"] = df.set_index("Date")["Distance (km)"].rolling("7d").sum().reset_index(drop=True)
+
+    tenk_df = df[(df["Distance (km)"] >= 9.8) & (df["Distance (km)"] <= 10.2)].dropna()
+
+    if len(tenk_df) < 5:
+        return None, "Not enough 10K runs to train the model."
+
+    features = tenk_df[["Distance (km)", "Pace", "Average HR", "Pace/HR", "7d_km"]]
+    target = tenk_df["Time (minutes)"]
+
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.25, random_state=42)
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+    mae = mean_absolute_error(y_test, y_pred)
+
+    # Plot actual vs predicted
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.scatter(y_test, y_pred, alpha=0.8, label="Predicted")
+    ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', label="Perfect Prediction")
+    ax.set_xlabel("Actual 10K Time (min)")
+    ax.set_ylabel("Predicted 10K Time (min)")
+    ax.set_title(f"10K: Actual vs Predicted (MAE: ±{mae:.1f} min)")
+    ax.legend()
+    ax.grid(alpha=0.3)
+
+    return fig, round(mae, 1)
 
 
     

@@ -9,15 +9,12 @@ from utils.visualisations import (
     calculate_workloads,
     plot_pace_vs_hr,
     plot_weekly_rolling_distance,
-    predict_10k_performance,
-    predict_10k_performance_with_plot
+    predict_10k_from_all_models
 )
 import time
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-
 
 def main():
     st.set_page_config(page_title="Strava Dashboard", layout="wide")
@@ -25,7 +22,6 @@ def main():
     st.title("Strava Dashboard")
     st.write("Running Data")
 
-    # Refresh the access token
     try:
         access_token = refresh_access_token(refresh_token, client_id, client_secret)
         st.success("Access token refreshed successfully")
@@ -33,7 +29,6 @@ def main():
         st.error(f"Error refreshing token: {e}")
         return
 
-    # Fetch and process activities
     try:
         start_date = int(time.mktime(time.strptime("2024-06-01", "%Y-%m-%d")))
         activities = fetch_activities(access_token, start_date)
@@ -42,7 +37,6 @@ def main():
             st.success("Activities fetched successfully")
             df = process_activities(activities)
 
-            # Workload Summary
             acute_workload, chronic_workload, acwr = calculate_workloads(df)
             st.subheader("Workload Summary")
             workload_data = {
@@ -51,7 +45,6 @@ def main():
             }
             st.table(workload_data)
 
-            # Monthly & Weekly Distance
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader("Monthly Distance")
@@ -60,68 +53,41 @@ def main():
                 st.subheader("Weekly Distance")
                 st.pyplot(plot_weekly_distance(df))
 
-            # Distance Progression
             st.subheader("Distance Progression Filter")
-            selected_distance = st.selectbox(
-                "Select a Distance for Progression:",
-                [5, 6, 7, 10],
-                index=0
-            )
+            selected_distance = st.selectbox("Select a Distance for Progression:", [5, 6, 7, 10], index=0)
             st.subheader(f"{selected_distance}K Progression")
             progression_chart = plot_progression(df, selected_distance - 0.1, selected_distance + 0.1)
-
             if progression_chart:
                 st.pyplot(progression_chart)
             else:
                 st.warning(f"No data available for {selected_distance}K progression.")
 
-            # Rolling Average of Weekly Distance
             st.subheader("Rolling Average of Weekly Distance")
             rolling_avg_chart = plot_weekly_rolling_distance(df)
-
             if rolling_avg_chart:
                 st.pyplot(rolling_avg_chart)
             else:
                 st.warning("No data available for weekly rolling average.")
 
-            # Pace vs. Heart Rate Chart
             st.subheader("Pace vs. Heart Rate by Month")
-            selected_hr_distance = st.selectbox(
-                "Select a Distance for Pace vs. Heart Rate Analysis:",
-                [5, 6, 7, 8, 10],
-                index=0
-            )
+            selected_hr_distance = st.selectbox("Select a Distance for Pace vs. Heart Rate Analysis:", [5, 6, 7, 8, 10], index=0)
             pace_hr_chart = plot_pace_vs_hr(df, selected_hr_distance - 0.1, selected_hr_distance + 0.1)
-
             if pace_hr_chart:
                 st.pyplot(pace_hr_chart)
             else:
                 st.warning(f"No data available for {selected_hr_distance}K pace vs. heart rate analysis.")
 
-            # Last 7 Sessions Table
             st.subheader("Last 7 Sessions")
             st.table(df[["Date", "Distance (km)", "Formatted Time", "Average HR"]].tail(7).reset_index(drop=True))
 
-            # -------------------------------
-            # 🤖 ML Insights: 10K Prediction
-            # -------------------------------
-            st.header("🤖 ML Insights: 10K Prediction")
-
-            fig, mae = predict_10k_performance_with_plot(df)
-
-
-            if fig:
-                st.pyplot(fig)
-                st.caption(f"Model MAE: ±{mae} minutes")
+            st.header("\U0001F916 ML Insights: 10K Prediction (Model Comparison)")
+            model_results = predict_10k_from_all_models(df)
+            if isinstance(model_results, pd.DataFrame):
+                st.table(model_results)
             else:
-                st.warning(mae)
-                
-           
-            # -------------------------------
-            # 📅 Weekly Training Plan Section
-            # -------------------------------
-            st.header("📅 Weekly Training Plan")
+                st.warning(model_results)
 
+            st.header("\U0001F4C5 Weekly Training Plan")
             training_plan = {
                 "Monday": "10–15K Long Easy Run",
                 "Tuesday": "2K Intervals × 4",
@@ -133,7 +99,6 @@ def main():
             }
 
             today = datetime.today().strftime("%A")
-
             st.subheader(f"Today's Session: {today}")
             st.write(training_plan.get(today, "No plan found."))
 
@@ -141,9 +106,11 @@ def main():
                 for day, session in training_plan.items():
                     st.markdown(f"**{day}:** {session}")
 
+        else:
+            st.warning("No activities found.")
+
     except Exception as e:
         st.error(f"Error fetching activities: {e}")
-
 
 if __name__ == "__main__":
     main()

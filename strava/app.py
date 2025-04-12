@@ -142,55 +142,7 @@ def main():
                 for day, session in training_plan.items():
                     st.markdown(f"**{day}:** {session}")
 
-            # -----------------------------------
-            # 📉 Bodyweight & BMI Tracker Section
-            # -----------------------------------
-            st.header("📉 Bodyweight & BMI Tracker")
-
-            weight_file = "weight_log.csv"
-            if os.path.exists(weight_file):
-                weight_df = pd.read_csv(weight_file, parse_dates=["Date"])
-            else:
-                weight_df = pd.DataFrame(columns=["Date", "Weight (kg)", "Height (cm)"])
-
-            with st.form("weight_entry_form"):
-                weight = st.number_input("Enter your current weight (kg):", min_value=30.0, max_value=200.0, step=0.1)
-                height = st.number_input("Enter your height (cm):", min_value=100.0, max_value=250.0, step=0.1)
-                date = st.date_input("Date:", pd.to_datetime("today"))
-                submit = st.form_submit_button("Add Entry")
-
-                if submit:
-                    new_entry = pd.DataFrame({
-                        "Date": [date],
-                        "Weight (kg)": [weight],
-                        "Height (cm)": [height]
-                    })
-                    weight_df = pd.concat([weight_df, new_entry], ignore_index=True)
-                    weight_df.to_csv(weight_file, index=False)
-                    st.success("Entry added!")
-
-            if not weight_df.empty:
-                weight_df["BMI"] = weight_df["Weight (kg)"] / ((weight_df["Height (cm)"] / 100) ** 2)
-                weight_df = weight_df.sort_values("Date")
-
-                st.metric("Latest Weight", f"{weight_df['Weight (kg)'].iloc[-1]:.1f} kg")
-                st.metric("Latest BMI", f"{weight_df['BMI'].iloc[-1]:.1f}")
-
-                fig, ax = plt.subplots(figsize=(10, 5))
-                ax.plot(weight_df["Date"], weight_df["Weight (kg)"], marker="o", label="Weight (kg)")
-                ax.set_ylabel("Weight (kg)")
-                ax.set_xlabel("Date")
-                ax.set_title("Bodyweight Over Time")
-                ax.grid(alpha=0.3)
-                st.pyplot(fig)
-            else:
-                st.info("No weight data yet. Enter your first log above.")
-
-        else:
-            st.warning("No activities found.")
-    
-    except Exception as e:
-        st.error(f"Error fetching activities: {e}")
+        
 
 
 if __name__ == "__main__":

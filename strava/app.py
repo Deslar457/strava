@@ -9,7 +9,7 @@ from utils.visualisations import (
     calculate_workloads,
     plot_pace_vs_hr,
     plot_weekly_rolling_distance,
-    predict_10k_from_all_models
+    predict_10k_rf
 )
 import time
 import pandas as pd

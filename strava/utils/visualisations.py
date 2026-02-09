@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 
 
+
 def plot_progression(df, lower_bound, upper_bound):
     progression = df[(df["Distance (km)"] >= lower_bound) & (df["Distance (km)"] < upper_bound)]
     progression = progression.groupby("Month")["Time (minutes)"].min()
@@ -118,42 +119,57 @@ def plot_weekly_rolling_distance(df, window=4):
     return fig
 
 ##function for predction variou smodels
-def predict_10k_from_all_models(df):
+def predict_10k_rf(df):
     df = df.copy()
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date")
+
+    # Feature engineering
     df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
     df["Pace/HR"] = df["Pace"] / df["Average HR"]
-    df["7d_km"] = df.set_index("Date")["Distance (km)"].rolling("7d").sum().reset_index(drop=True)
+    df["7d_km"] = (
+        df.set_index("Date")["Distance (km)"]
+        .rolling("7d")
+        .sum()
+        .reset_index(drop=True)
+    )
 
+    # Use only real 10K runs
     tenk_df = df[(df["Distance (km)"] >= 9.8) & (df["Distance (km)"] <= 10.2)].dropna()
     if len(tenk_df) < 5:
-        return None, "Not enough 10K runs to train the models."
+        return None, "Not enough 10K runs to train the model."
 
-    features = tenk_df[["Distance (km)", "Pace", "Average HR", "Pace/HR", "7d_km"]]
-    target = tenk_df["Time (minutes)"]
-    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.25, random_state=42)
+    X = tenk_df[["Pace", "Average HR", "Pace/HR", "7d_km"]]
+    y = tenk_df["Time (minutes)"]
 
-    models = {
-        "Linear Regression": LinearRegression(),
-        "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42),
-        "XGBoost": XGBRegressor(n_estimators=100, random_state=42, verbosity=0)
-    }
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.25, random_state=42
+    )
 
-    results = []
+    model = RandomForestRegressor(
+        n_estimators=300,
+        random_state=42,
+        max_depth=6
+    )
+    model.fit(X_train, y_train)
+
+    # Evaluate
+    mae = mean_absolute_error(y_test, model.predict(X_test))
+
+    # Predict next 10K based on latest run
     latest = df.iloc[-1]
     latest_input = pd.DataFrame([{
-        "Distance (km)": 10.0,
         "Pace": latest["Time (minutes)"] / latest["Distance (km)"],
         "Average HR": latest["Average HR"],
         "Pace/HR": (latest["Time (minutes)"] / latest["Distance (km)"]) / latest["Average HR"],
         "7d_km": df.set_index("Date")["Distance (km)"].rolling("7d").sum().iloc[-1]
     }])
 
-    for name, model in models.items():
-        model.fit(X_train, y_train)
-        prediction = model.predict(latest_input)[0]
-        mae = mean_absolute_error(y_test, model.predict(X_test))
-        results.append({"Model": name, "Predicted Time (min)": round(prediction, 2), "MAE (±min)": round(mae, 2)})
+    prediction = model.predict(latest_input)[0]
 
-    return pd.DataFrame(results)
+    return {
+        "Predicted 10K Time (min)": round(prediction, 2),
+        "Predicted 10K Time": format_time(prediction),
+        "Model MAE (±min)": round(mae, 2),
+        "Training Samples": len(tenk_df)
+    }

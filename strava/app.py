@@ -233,7 +233,7 @@ def main():
     # ═══════════════════════════════════════════════════════════════════════════
     st.markdown("### Effort Zone Distribution")
     st.caption("Monthly volume split by effort zone. Easy = >4:45/km · Moderate/Threshold = 4:17–4:45/km · Hard = <4:17/km")
-    threshold_pace = (lthr / 167) * 4.417 if lthr else 4.417
+    threshold_pace = 4.417
     fig_zones = plot_pace_zones(df, threshold_pace=threshold_pace)
     if fig_zones:
         st.pyplot(fig_zones)

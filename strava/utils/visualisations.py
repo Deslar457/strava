@@ -386,7 +386,17 @@ def plot_pace_zones(df, threshold_pace=None):
 
     df["Zone"] = df["Pace"].apply(classify)
 
-    zone_monthly = df.groupby(["Month", "Zone"])["Distance (km)"].sum().unstack(fill_value=0)
+    df["Month"] = pd.to_datetime(df["Date"]).dt.to_period("M").dt.to_timestamp()
+
+    zone_monthly = (
+        df.groupby(["Month", "Zone"])["Distance (km)"]
+        .sum()
+        .unstack(fill_value=0)
+        .sort_index()
+    )
+
+# Extra safety for Streamlit/Matplotlib
+    zone_monthly.index = pd.to_datetime(zone_monthly.index)
 
     zone_colours = {
         "Easy": "steelblue",

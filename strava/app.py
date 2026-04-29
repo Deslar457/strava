@@ -62,7 +62,7 @@ def load_data():
 
 def main():
     st.set_page_config(
-        page_title="Speirs Conditioning | Running Dashboard",
+        page_title="Derrick Running Dashboard",
         layout="wide",
         initial_sidebar_state="collapsed"
     )
@@ -71,7 +71,7 @@ def main():
     st.markdown("""
         <div style='padding: 8px 0 4px 0'>
             <span style='font-size:0.85em; color:#888; letter-spacing:2px; text-transform:uppercase'>
-                Speirs Conditioning Method
+                Running Dashboard
             </span><br>
             <span style='font-size:2em; font-weight:700'>Running Dashboard</span>
         </div>
@@ -353,7 +353,7 @@ def main():
     st.markdown("---")
     st.markdown(
         "<div style='text-align:center; color:#aaa; font-size:0.8em'>"
-        "Speirs Conditioning Method · Running Dashboard · "
+        "Derrick Running Dashboard · "
         f"Last updated {datetime.now().strftime('%d %b %Y %H:%M')}"
         "</div>",
         unsafe_allow_html=True

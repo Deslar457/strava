@@ -5,7 +5,18 @@ PLAN = {
     "weeks": [
         {
             "week": 1,
-            "start": "2026-05-05",
+            "start": "2026-05-04",
+            "sessions": {
+                "Tuesday":   {"type": "Intervals", "distance": 7,  "detail": "1k w/u · 5×1k intervals · 1k c/d (completed)"},
+                "Wednesday": {"type": "Easy",      "distance": 7,  "detail": "5:20–5:40/km — fully conversational"},
+                "Friday":    {"type": "Easy",      "distance": 7,  "detail": "5:20–5:40/km — fully conversational"},
+                "Sunday":    {"type": "Long",      "distance": 10, "detail": "Easy — deload week, protect legs"},
+            },
+            "total": 31,
+        },
+        {
+            "week": 2,
+            "start": "2026-05-11",
             "sessions": {
                 "Monday":    {"type": "Threshold", "distance": 6,  "detail": "1k w/u · 4k @ 4:20–4:30/km · 1k c/d"},
                 "Wednesday": {"type": "Easy",      "distance": 10, "detail": "5:20–5:40/km — fully conversational"},
@@ -15,8 +26,8 @@ PLAN = {
             "total": 35,
         },
         {
-            "week": 2,
-            "start": "2026-05-12",
+            "week": 3,
+            "start": "2026-05-18",
             "sessions": {
                 "Monday":    {"type": "Intervals", "distance": 7,  "detail": "1k w/u · 5×1k @ 4:05/km · 1k c/d · 90s rest"},
                 "Wednesday": {"type": "Easy",      "distance": 11, "detail": "5:20–5:40/km — fully conversational"},
@@ -26,8 +37,8 @@ PLAN = {
             "total": 39,
         },
         {
-            "week": 3,
-            "start": "2026-05-19",
+            "week": 4,
+            "start": "2026-05-25",
             "sessions": {
                 "Monday":    {"type": "Threshold", "distance": 6,  "detail": "1k w/u · 4k @ 4:20/km · 1k c/d"},
                 "Wednesday": {"type": "Easy",      "distance": 12, "detail": "5:20–5:40/km — fully conversational"},
@@ -35,17 +46,6 @@ PLAN = {
                 "Sunday":    {"type": "Long",      "distance": 14, "detail": "Full easy — do not race it"},
             },
             "total": 40,
-        },
-        {
-            "week": 4,
-            "start": "2026-05-26",
-            "sessions": {
-                "Monday":    {"type": "Intervals", "distance": 6,  "detail": "1k w/u · 4×1k @ 4:05/km · 1k c/d · 90s rest"},
-                "Wednesday": {"type": "Easy",      "distance": 9,  "detail": "5:20–5:40/km — deload week"},
-                "Friday":    {"type": "Easy",      "distance": 7,  "detail": "5:20–5:40/km — deload week"},
-                "Sunday":    {"type": "Long",      "distance": 12, "detail": "Easy — protect legs — deload"},
-            },
-            "total": 34,
         },
     ]
 }

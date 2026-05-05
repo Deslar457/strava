@@ -6,7 +6,7 @@ from services.strava_api import refresh_access_token, fetch_activities
 from services.config import client_id, client_secret, refresh_token
 from utils.data_processing import process_activities
 from utils.plan_loader import (
-    get_current_plan, get_todays_session, get_week_summary, SESSION_COLOURS
+    get_current_plan, get_todays_session, get_week_summary
 )
 from utils.visualisations import (
     plot_monthly_distance,
@@ -15,14 +15,16 @@ from utils.visualisations import (
     plot_fitness_freshness,
     plot_long_run_progression,
     plot_pace_zones,
-    calculate_workloads,
+    calculate_training_stress,
+    calculate_distance_acwr,
     get_personal_records,
     get_form_status,
     get_ctl_delta,
     predict_race_times,
     predict_10k_rf,
     estimate_threshold_hr,
-    format_time,
+    get_zone_caption,
+    DEFAULT_THRESHOLD_PACE,
 )
 
 # ── Colour maps ───────────────────────────────────────────────────────────────
@@ -47,17 +49,20 @@ def session_badge(session_type):
     return emoji
 
 
-def divider(label):
-    st.markdown(f"### {label}")
-    st.markdown("---")
-
-
 @st.cache_data(ttl=300)
 def load_data():
     access_token = refresh_access_token(refresh_token, client_id, client_secret)
     start_date = int(time.mktime(time.strptime("2024-06-01", "%Y-%m-%d")))
     activities = fetch_activities(access_token, start_date)
     return activities
+
+
+@st.cache_data(ttl=300)
+def get_processed_data():
+    activities = load_data()
+    if not activities:
+        return None
+    return process_activities(activities)
 
 
 def main():
@@ -79,19 +84,18 @@ def main():
 
     # ── Load data ─────────────────────────────────────────────────────────────
     with st.spinner("Loading Strava data..."):
-        activities = load_data()
+        df = get_processed_data()
 
-    if not activities:
+    if df is None or df.empty:
         st.warning("No activities found. Check your Strava connection.")
         return
 
-    df = process_activities(activities)
-
-    # ── Pre-compute shared values ─────────────────────────────────────────────
+    # ── Pre-compute shared values ONCE ────────────────────────────────────────
+    daily = calculate_training_stress(df)
     _, lthr = estimate_threshold_hr(df)
-    form = get_form_status(df)
-    acute, chronic, acwr = calculate_workloads(df)
-    ctl_delta = get_ctl_delta(df, days=28)
+    form = get_form_status(daily)
+    acute, chronic, acwr = calculate_distance_acwr(df)
+    ctl_delta = get_ctl_delta(daily, days=28)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # SECTION 1 — Form Banner
@@ -122,7 +126,7 @@ def main():
     c2.metric("Chronic Load (28d)", f"{chronic:.1f} km")
     acwr_delta = "⚠️ Injury risk" if acwr > 1.5 else ("✅ Optimal" if acwr <= 1.3 else "")
     c3.metric("ACWR", f"{acwr:.2f}", delta=acwr_delta,
-              help="Acute:Chronic Workload Ratio. 1.0–1.3 optimal. >1.5 elevated injury risk.")
+              help="Distance-based Acute:Chronic Workload Ratio. 1.0–1.3 optimal. >1.5 elevated injury risk.")
     c4.metric("LTHR (estimated)", f"{lthr} bpm" if lthr else "—",
               help="Estimated from hardest sustained efforts ≥6km, ≥25min, top 15% HR.")
 
@@ -137,7 +141,11 @@ def main():
 
     if plan:
         today = date.today()
-        week_data, days = get_week_summary(plan, today) or (None, None)
+        week_summary = get_week_summary(plan, today)
+        if week_summary:
+            week_data, days = week_summary
+        else:
+            week_data, days = None, None
         _, todays_session = get_todays_session(plan, today)
 
         col_today, col_week = st.columns([1, 2])
@@ -182,13 +190,11 @@ def main():
             if week_data and days:
                 planned_km = week_data["total"]
 
-                # Actual km this week from Strava
                 week_start = datetime.strptime(week_data["start"], "%Y-%m-%d")
                 actual_km = df[df["Date"] >= week_start]["Distance (km)"].sum()
 
                 st.markdown(f"**Week {week_data['week']} — Planned: {planned_km}k · Actual so far: {actual_km:.1f}k**")
 
-                # Progress bar
                 pct = min(actual_km / planned_km, 1.0) if planned_km > 0 else 0
                 bar_colour = "#2ecc71" if pct >= 1.0 else "#f39c12" if pct >= 0.5 else "#e74c3c"
                 st.markdown(
@@ -224,7 +230,7 @@ def main():
     # ═══════════════════════════════════════════════════════════════════════════
     st.markdown("### Fitness & Freshness")
     st.caption("CTL = fitness (42-day load). ATL = fatigue (7-day load). TSB = form (CTL − ATL). LTHR dynamically estimated from your data.")
-    st.pyplot(plot_fitness_freshness(df))
+    st.pyplot(plot_fitness_freshness(daily))
 
     st.divider()
 
@@ -232,8 +238,8 @@ def main():
     # SECTION 5 — Pace Zone Distribution
     # ═══════════════════════════════════════════════════════════════════════════
     st.markdown("### Effort Zone Distribution")
-    st.caption("Monthly volume split by effort zone. Easy = >4:45/km · Moderate/Threshold = 4:17–4:45/km · Hard = <4:17/km")
-    threshold_pace = 4.417
+    threshold_pace = DEFAULT_THRESHOLD_PACE
+    st.caption(get_zone_caption(threshold_pace))
     fig_zones = plot_pace_zones(df, threshold_pace=threshold_pace)
     if fig_zones:
         st.pyplot(fig_zones)
@@ -290,7 +296,7 @@ def main():
                     f"This reflects current training load, not your ceiling."
                 )
         else:
-            st.warning(result[1] if isinstance(result, tuple) else result)
+            st.warning(result)
 
     with col_riegel:
         st.markdown("**Riegel Formula — All Distances**")

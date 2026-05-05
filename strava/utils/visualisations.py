@@ -6,6 +6,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 
 
+# ── Pace zone thresholds (relative to LT pace) ──────────────────────────────
+# Hard / Race Pace : pace <= LT * HARD_MULT      (faster than threshold)
+# Moderate         : LT * HARD_MULT < pace <= LT * EASY_MULT
+# Easy             : pace > LT * EASY_MULT       (slower than threshold)
+HARD_MULT = 0.97
+EASY_MULT = 1.08
+
+DEFAULT_THRESHOLD_PACE = 4.417  # 4:25/km — used when LT pace can't be derived
+
+
 def format_time(minutes):
     mins = int(minutes)
     secs = round((minutes - mins) * 60)
@@ -75,17 +85,17 @@ def calculate_training_stress(df):
     return daily
 
 
-def get_ctl_delta(df, days=28):
-    daily = calculate_training_stress(df)
+def get_ctl_delta(daily, days=28):
+    """Accepts pre-computed daily DataFrame from calculate_training_stress."""
     if len(daily) < days:
         return None
-
     current_ctl = daily.iloc[-1]["CTL"]
     past_ctl = daily.iloc[-days]["CTL"]
     return round(current_ctl - past_ctl, 1)
 
 
-def calculate_workloads(df):
+def calculate_distance_acwr(df):
+    """Distance-based acute:chronic workload ratio (simple km proxy)."""
     df = df.sort_values("Date")
     acute = df[df["Date"] >= df["Date"].max() - pd.Timedelta(days=7)]["Distance (km)"].sum()
     chronic = df[df["Date"] >= df["Date"].max() - pd.Timedelta(days=28)]["Distance (km)"].sum() / 4
@@ -93,8 +103,8 @@ def calculate_workloads(df):
     return acute, chronic, acwr
 
 
-def get_form_status(df):
-    daily = calculate_training_stress(df)
+def get_form_status(daily):
+    """Accepts pre-computed daily DataFrame from calculate_training_stress."""
     latest = daily.iloc[-1]
 
     tsb = latest["TSB"]
@@ -173,6 +183,7 @@ def predict_race_times(df):
 
 
 def predict_10k_rf(df):
+    """Returns dict on success, str (error message) on failure."""
     df = df.copy().sort_values("Date")
     df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
     df["Pace/HR"] = df["Pace"] / df["Average HR"]
@@ -184,7 +195,7 @@ def predict_10k_rf(df):
     tenk = df[df["Distance (km)"].between(9.8, 10.2)].dropna()
 
     if len(tenk) < 5:
-        return None, "Not enough 10K runs (need 5+)."
+        return "Not enough 10K runs (need 5+)."
 
     X = tenk[["Pace", "Average HR", "Pace/HR", "7d_km"]]
     y = tenk["Time (minutes)"]
@@ -222,9 +233,8 @@ def predict_10k_rf(df):
     }
 
 
-def plot_fitness_freshness(df):
-    daily = calculate_training_stress(df)
-
+def plot_fitness_freshness(daily):
+    """Accepts pre-computed daily DataFrame from calculate_training_stress."""
     fig, ax = plt.subplots(figsize=(12, 5))
 
     ax.plot(daily["Date"], daily["CTL"], label="Fitness (CTL)", color="steelblue", linewidth=2)
@@ -427,12 +437,14 @@ def plot_pace_zones(df, threshold_pace=None):
     df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
     df["Month"] = pd.to_datetime(df["Date"]).dt.to_period("M").dt.to_timestamp()
 
-    tp = threshold_pace if threshold_pace else 4.417
+    tp = threshold_pace if threshold_pace else DEFAULT_THRESHOLD_PACE
+    hard_cutoff = tp * HARD_MULT
+    easy_cutoff = tp * EASY_MULT
 
     def classify(pace):
-        if pace <= tp * 0.97:
+        if pace <= hard_cutoff:
             return "Hard / Race Pace"
-        elif pace <= tp * 1.08:
+        elif pace <= easy_cutoff:
             return "Moderate / Threshold"
         else:
             return "Easy"
@@ -462,8 +474,6 @@ def plot_pace_zones(df, threshold_pace=None):
 
     colours = [zone_colours[c] for c in cols]
 
-    # Critical Streamlit fix:
-    # Convert datetime/period-like index to plain strings before pandas bar plot.
     zone_plot = zone_monthly[cols].copy()
     zone_plot.index = pd.to_datetime(zone_plot.index).strftime("%b %Y")
 
@@ -487,3 +497,14 @@ def plot_pace_zones(df, threshold_pace=None):
     plt.tight_layout()
 
     return fig
+
+
+def get_zone_caption(threshold_pace=None):
+    """Returns a caption string showing actual zone boundaries."""
+    tp = threshold_pace if threshold_pace else DEFAULT_THRESHOLD_PACE
+    hard = format_time(tp * HARD_MULT)
+    easy = format_time(tp * EASY_MULT)
+    return (
+        f"Monthly volume split by effort zone. "
+        f"Easy = >{easy}/km · Moderate/Threshold = {hard}–{easy}/km · Hard = <{hard}/km"
+    )

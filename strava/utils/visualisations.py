@@ -1,15 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error
 
 
 # ── Pace zone thresholds (relative to LT pace) ──────────────────────────────
-# Hard / Race Pace : pace <= LT * HARD_MULT      (faster than threshold)
-# Moderate         : LT * HARD_MULT < pace <= LT * EASY_MULT
-# Easy             : pace > LT * EASY_MULT       (slower than threshold)
 HARD_MULT = 0.97
 EASY_MULT = 1.08
 
@@ -131,6 +125,72 @@ def get_form_status(daily):
     }
 
 
+def get_recent_workouts(df, daily, lthr, n=7):
+    """
+    Returns a summary DataFrame of the last n workouts with key metrics.
+    Takes lthr as argument so all runs are scored against the same threshold
+    used by the main dashboard.
+    """
+    df = df.copy().sort_values("Date", ascending=False).head(n).copy()
+
+    threshold_hr = lthr if lthr else 167
+    df["Duration (hours)"] = df["Time (minutes)"] / 60
+    df["IF"] = (df["Average HR"] / threshold_hr).clip(upper=1.2)
+    df["TSS_run"] = df["Duration (hours)"] * (df["IF"] ** 2) * 100
+    df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
+
+    def effort_tag(row):
+        # Override: short fast sessions are intervals — always Hard
+        if row["Distance (km)"] < 7 and row["Pace"] < 4.2 and row["Time (minutes)"] < 30:
+            return "🔴 Hard"
+        if row["IF"] >= 0.95:
+            return "🔴 Hard"
+        elif row["IF"] >= 0.88:
+            return "🟠 Moderate"
+        else:
+            return "🟢 Easy"
+
+    df["Effort"] = df.apply(effort_tag, axis=1)
+
+    # Lookup CTL on each run's date from daily
+    daily_lookup = daily.set_index(daily["Date"].dt.normalize())["CTL"]
+    df["CTL"] = df["Date"].dt.normalize().map(daily_lookup)
+
+    out = pd.DataFrame({
+        "Date":     df["Date"].dt.strftime("%a %d %b"),
+        "Distance": df["Distance (km)"].apply(lambda x: f"{x:.2f} km"),
+        "Time":     df["Time (minutes)"].apply(format_time),
+        "Pace":     df["Pace"].apply(lambda x: f"{format_time(x)}/km"),
+        "Avg HR":   df["Average HR"].apply(lambda x: f"{int(x)} bpm" if pd.notna(x) else "—"),
+        "%LTHR":    df["IF"].apply(lambda x: f"{x*100:.0f}%"),
+        "TSS":      df["TSS_run"].apply(lambda x: f"{x:.0f}"),
+        "CTL":      df["CTL"].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "—"),
+        "Effort":   df["Effort"],
+    })
+
+    return out.reset_index(drop=True)
+
+
+def get_recent_summary(df, daily, lthr, n=7):
+    """Returns aggregate metrics for the last n workouts as a dict."""
+    last_n = df.copy().sort_values("Date", ascending=False).head(n)
+
+    threshold_hr = lthr if lthr else 167
+    duration_hours = last_n["Time (minutes)"] / 60
+    IF = (last_n["Average HR"] / threshold_hr).clip(upper=1.2)
+    tss_total = (duration_hours * (IF ** 2) * 100).sum()
+
+    return {
+        "total_distance": last_n["Distance (km)"].sum(),
+        "total_time": last_n["Time (minutes)"].sum(),
+        "total_tss": tss_total,
+        "avg_hr": last_n["Average HR"].mean(),
+        "current_ctl": daily.iloc[-1]["CTL"],
+        "current_atl": daily.iloc[-1]["ATL"],
+        "current_tsb": daily.iloc[-1]["TSB"],
+    }
+
+
 def get_personal_records(df):
     distances = {
         "5K": (4.8, 5.2),
@@ -179,57 +239,6 @@ def predict_race_times(df):
         "5K": format_time(base_5k_time),
         "10K": format_time(riegel(base_5k_time, 5, 10)),
         "Half Marathon": format_time(riegel(base_5k_time, 5, 21.1)),
-    }
-
-
-def predict_10k_rf(df):
-    """Returns dict on success, str (error message) on failure."""
-    df = df.copy().sort_values("Date")
-    df["Pace"] = df["Time (minutes)"] / df["Distance (km)"]
-    df["Pace/HR"] = df["Pace"] / df["Average HR"]
-
-    df = df.set_index("Date")
-    df["7d_km"] = df["Distance (km)"].rolling("7d").sum()
-    df = df.reset_index()
-
-    tenk = df[df["Distance (km)"].between(9.8, 10.2)].dropna()
-
-    if len(tenk) < 5:
-        return "Not enough 10K runs (need 5+)."
-
-    X = tenk[["Pace", "Average HR", "Pace/HR", "7d_km"]]
-    y = tenk["Time (minutes)"]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42
-    )
-
-    model = RandomForestRegressor(n_estimators=200, max_depth=5, random_state=42)
-    model.fit(X_train, y_train)
-
-    mae = mean_absolute_error(y_test, model.predict(X_test))
-
-    latest = df.iloc[-1]
-    latest_input = pd.DataFrame([{
-        "Pace": latest["Pace"],
-        "Average HR": latest["Average HR"],
-        "Pace/HR": latest["Pace/HR"],
-        "7d_km": df["7d_km"].iloc[-1],
-    }])
-
-    pred = model.predict(latest_input)[0]
-
-    pb_row = tenk.loc[tenk["Time (minutes)"].idxmin()]
-    pb_minutes = pb_row["Time (minutes)"]
-
-    return {
-        "Predicted Time": format_time(pred),
-        "Predicted Minutes": round(pred, 2),
-        "MAE (±min)": round(mae, 2),
-        "Training Runs": len(tenk),
-        "PB": format_time(pb_minutes),
-        "PB Minutes": round(pb_minutes, 2),
-        "Below PB": pred > pb_minutes,
     }
 
 

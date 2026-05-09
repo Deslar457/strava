@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import pandas as pd
 from datetime import date, datetime
 
 from services.strava_api import refresh_access_token, fetch_activities
@@ -21,9 +22,10 @@ from utils.visualisations import (
     get_form_status,
     get_ctl_delta,
     predict_race_times,
-    predict_10k_rf,
     estimate_threshold_hr,
     get_zone_caption,
+    get_recent_workouts,
+    get_recent_summary,
     DEFAULT_THRESHOLD_PACE,
 )
 
@@ -133,6 +135,25 @@ def main():
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION 2.5 — Last 7 Workouts
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.markdown("### Last 7 Workouts")
+
+    summary = get_recent_summary(df, daily, lthr=lthr, n=7)
+
+    s1, s2, s3, s4 = st.columns(4)
+    s1.metric("Total Distance", f"{summary['total_distance']:.1f} km")
+    s2.metric("Total Time", f"{int(summary['total_time'])} min")
+    s3.metric("Total TSS", f"{summary['total_tss']:.0f}")
+    s4.metric("Avg HR", f"{summary['avg_hr']:.0f} bpm" if pd.notna(summary['avg_hr']) else "—")
+
+    recent = get_recent_workouts(df, daily, lthr=lthr, n=7)
+    st.dataframe(recent, use_container_width=True, hide_index=True)
+    st.caption("🟢 Easy = <88% LTHR · 🟠 Moderate = 88–95% LTHR · 🔴 Hard = ≥95% LTHR. Short fast sessions tagged Hard regardless of avg HR.")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════
     # SECTION 3 — Today's Session + This Week
     # ═══════════════════════════════════════════════════════════════════════════
     plan = get_current_plan()
@@ -143,9 +164,9 @@ def main():
         today = date.today()
         week_summary = get_week_summary(plan, today)
         if week_summary:
-            week_data, days = week_summary
+            week_data, days_list = week_summary
         else:
-            week_data, days = None, None
+            week_data, days_list = None, None
         _, todays_session = get_todays_session(plan, today)
 
         col_today, col_week = st.columns([1, 2])
@@ -187,7 +208,7 @@ def main():
                 )
 
         with col_week:
-            if week_data and days:
+            if week_data and days_list:
                 planned_km = week_data["total"]
 
                 week_start = datetime.strptime(week_data["start"], "%Y-%m-%d")
@@ -206,7 +227,7 @@ def main():
                     unsafe_allow_html=True
                 )
 
-                for day_info in days:
+                for day_info in days_list:
                     s = day_info["session"]
                     is_today = day_info["is_today"]
                     day_label = day_info["date"].strftime("%a %d")
@@ -278,35 +299,18 @@ def main():
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 8 — Race Predictions
+    # SECTION 8 — Race Predictions (Riegel)
     # ═══════════════════════════════════════════════════════════════════════════
     st.markdown("### Race Time Predictions")
-    col_rf, col_riegel = st.columns(2)
-
-    with col_rf:
-        st.markdown("**Random Forest — 10K**")
-        st.caption("Trained on your actual 10K efforts. Needs 5+ runs. Reflects current fitness, not peak.")
-        result = predict_10k_rf(df)
-        if isinstance(result, dict):
-            st.metric("Predicted 10K", result["Predicted Time"])
-            st.caption(f"MAE ±{result['MAE (±min)']} min · {result['Training Runs']} training runs")
-            if result.get("Below PB"):
-                st.warning(
-                    f"⚠️ Prediction ({result['Predicted Time']}) is slower than your PB ({result['PB']}). "
-                    f"This reflects current training load, not your ceiling."
-                )
-        else:
-            st.warning(result)
-
-    with col_riegel:
-        st.markdown("**Riegel Formula — All Distances**")
-        st.caption("Projected from recent pace/HR efficiency (last 8 weeks). Lower than PB = current fitness is below peak.")
-        preds = predict_race_times(df)
-        if preds:
-            for dist, t in preds.items():
-                st.metric(dist, t)
-        else:
-            st.warning("Not enough recent data for predictions.")
+    st.caption("Riegel formula projected from recent pace/HR efficiency (last 8 weeks). Reflects current training fitness, not race ceiling — predictions slower than your PB are normal during base training.")
+    preds = predict_race_times(df)
+    if preds:
+        col_5k, col_10k, col_hm = st.columns(3)
+        col_5k.metric("5K", preds["5K"])
+        col_10k.metric("10K", preds["10K"])
+        col_hm.metric("Half Marathon", preds["Half Marathon"])
+    else:
+        st.warning("Not enough recent data for predictions.")
 
     st.divider()
 
